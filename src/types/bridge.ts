@@ -31,7 +31,9 @@ export interface BridgeStatusResponse {
   realTime?: boolean;
   cached?: boolean;
   fallback?: boolean;
+  stale?: boolean;
   error?: string;
+  timestamp?: string;
   trafficData?: {
     directions: TrafficDirections;
     overallStatus: OverallTrafficStatus;

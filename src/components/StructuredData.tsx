@@ -7,17 +7,7 @@ export default function StructuredData() {
         "@id": "https://orwellbridgestatus.vercel.app/#website",
         "url": "https://orwellbridgestatus.vercel.app/",
         "name": "Orwell Bridge Status",
-        "description": "Real-time monitoring of Orwell Bridge (A14) traffic conditions, weather alerts, lane closures and delays",
-        "potentialAction": [
-          {
-            "@type": "SearchAction",
-            "target": {
-              "@type": "EntryPoint",
-              "urlTemplate": "https://orwellbridgestatus.vercel.app/?search={search_term_string}"
-            },
-            "query-input": "required name=search_term_string"
-          }
-        ]
+        "description": "Real-time monitoring of Orwell Bridge (A14) traffic conditions, weather alerts, lane closures and delays"
       },
       {
         "@type": "WebApplication",
@@ -68,7 +58,7 @@ export default function StructuredData() {
         "url": "https://orwellbridgestatus.vercel.app/",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://orwellbridgestatus.vercel.app/logo.png"
+          "url": "https://orwellbridgestatus.vercel.app/logo.svg"
         },
         "sameAs": [
           "https://github.com/developedbyalex/OrwellBridgeStatusV2"
