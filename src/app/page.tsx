@@ -8,12 +8,14 @@ import { useState, useEffect } from "react";
 import { BridgeStatusRecord, BridgeStatusResponse, WeatherResponse, TrafficDirections } from "@/types/bridge";
 
 type LaneStatus = "open" | "delayed" | "closed" | "unknown";
+type DataFreshness = "loading" | "live" | "cached" | "stale" | "fallback" | "error";
 
 interface BridgeStatus {
   eastbound: LaneStatus;
   westbound: LaneStatus;
   lastUpdated: string;
   isRealTime: boolean;
+  freshness: DataFreshness;
 }
 
 interface WeatherData {
@@ -30,7 +32,8 @@ export default function Home() {
     eastbound: "unknown",
     westbound: "unknown",
     lastUpdated: new Date().toLocaleTimeString(),
-    isRealTime: false
+    isRealTime: false,
+    freshness: "loading"
   });
 
   const [weather, setWeather] = useState<WeatherData>({
