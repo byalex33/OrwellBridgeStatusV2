@@ -220,7 +220,9 @@ export async function GET() {
         fallback: true,
         cached: true,
         timestamp: cachedData.timestamp,
-        trafficData: cachedData.trafficData
+        trafficData: cachedData.trafficData,
+        directions: cachedData.trafficData?.directions,
+        overallStatus: cachedData.trafficData?.overallStatus
       });
     }
 

@@ -123,6 +123,7 @@ export default function Home() {
         console.error('Failed to fetch data:', error);
         setBridgeStatus(prev => ({
           ...prev,
+          lastUpdated: 'Unavailable',
           isRealTime: false,
           freshness: 'error'
         }));
