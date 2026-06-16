@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     description: "Real-time monitoring of Orwell Bridge (A14) traffic conditions, weather alerts, lane closures and delays. Essential for Suffolk commuters.",
     images: [
       {
-        url: "/og-image.svg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "Orwell Bridge Status Dashboard",
@@ -73,16 +73,16 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Orwell Bridge Status - Live A14 Traffic Monitor",
     description: "Real-time monitoring of Orwell Bridge traffic conditions and weather alerts",
-    images: ["/og-image.svg"],
+    images: ["/og-image.png"],
     creator: "@OrwellBridgeStatus",
   },
   alternates: {
     canonical: "https://orwellbridgestatus.vercel.app",
   },
   icons: {
-    icon: "/logo.svg",
-    shortcut: "/logo.svg",
-    apple: "/logo.svg",
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
