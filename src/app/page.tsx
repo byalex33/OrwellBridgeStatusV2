@@ -98,6 +98,12 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
+        setBridgeStatus(prev => ({
+          ...prev,
+          lastUpdated: 'Unavailable',
+          isRealTime: false,
+          freshness: 'error'
+        }));
       } finally {
         setEventsLoading(false);
       }

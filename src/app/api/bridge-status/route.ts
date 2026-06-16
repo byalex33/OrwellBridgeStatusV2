@@ -103,14 +103,17 @@ async function refreshBridgeData() {
 
 export async function GET() {
   try {
-    const cacheResult = cache.getWithStale<{records: BridgeStatusRecord[], timestamp: Date, trafficData: unknown}>('bridge-status');
+    const cacheResult = cache.getWithStale<{records: BridgeStatusRecord[], timestamp: Date, trafficData: { directions: unknown; overallStatus: unknown }}>('bridge-status');
 
     if (cacheResult.data && !cacheResult.isStale) {
       return NextResponse.json({
         success: true,
         data: cacheResult.data.records,
         cached: true,
-        timestamp: cacheResult.data.timestamp
+        timestamp: cacheResult.data.timestamp,
+        trafficData: cacheResult.data.trafficData,
+        directions: cacheResult.data.trafficData?.directions,
+        overallStatus: cacheResult.data.trafficData?.overallStatus
       });
     }
 
@@ -120,7 +123,10 @@ export async function GET() {
         data: cacheResult.data.records,
         cached: true,
         stale: true,
-        timestamp: cacheResult.data.timestamp
+        timestamp: cacheResult.data.timestamp,
+        trafficData: cacheResult.data.trafficData,
+        directions: cacheResult.data.trafficData?.directions,
+        overallStatus: cacheResult.data.trafficData?.overallStatus
       });
 
       refreshBridgeData().catch(console.error);
@@ -206,13 +212,17 @@ export async function GET() {
   } catch (error) {
     console.error('Failed to fetch real traffic data, using fallback:', error);
 
-    const cachedData = cache.get<{records: BridgeStatusRecord[], timestamp: Date, trafficData: unknown}>('bridge-status');
+    const cachedData = cache.get<{records: BridgeStatusRecord[], timestamp: Date, trafficData: { directions: unknown; overallStatus: unknown }}>('bridge-status');
     if (cachedData) {
       return NextResponse.json({
         success: true,
         data: cachedData.records,
         fallback: true,
-        cached: true
+        cached: true,
+        timestamp: cachedData.timestamp,
+        trafficData: cachedData.trafficData,
+        directions: cachedData.trafficData?.directions,
+        overallStatus: cachedData.trafficData?.overallStatus
       });
     }
 
