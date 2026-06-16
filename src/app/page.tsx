@@ -9,11 +9,14 @@ import { BridgeStatusRecord, BridgeStatusResponse, WeatherResponse, TrafficDirec
 
 type LaneStatus = "open" | "delayed" | "closed" | "unknown";
 
+type DataFreshness = "loading" | "live" | "cached" | "stale" | "fallback" | "error";
+
 interface BridgeStatus {
   eastbound: LaneStatus;
   westbound: LaneStatus;
   lastUpdated: string;
   isRealTime: boolean;
+  freshness: DataFreshness;
 }
 
 interface WeatherData {
@@ -29,16 +32,17 @@ export default function Home() {
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>({
     eastbound: "unknown",
     westbound: "unknown",
-    lastUpdated: new Date().toLocaleTimeString(),
-    isRealTime: false
+    lastUpdated: "Loading...",
+    isRealTime: false,
+    freshness: "loading"
   });
 
   const [weather, setWeather] = useState<WeatherData>({
-    temperature: 12,
-    windSpeed: 25,
-    windDirection: 270,
+    temperature: 0,
+    windSpeed: 0,
+    windDirection: 0,
     description: "Loading...",
-    icon: "❓"
+    icon: "⏳"
   });
 
   const [pastEvents, setPastEvents] = useState<BridgeStatusRecord[]>([]);
@@ -54,31 +58,50 @@ export default function Home() {
           fetch('/api/events')
         ]);
 
+        if (!bridgeResponse.ok || !weatherResponse.ok || !eventsResponse.ok) {
+          throw new Error('One or more API requests failed');
+        }
+
         const bridgeResult: BridgeStatusResponse = await bridgeResponse.json();
         const weatherResult: WeatherResponse = await weatherResponse.json();
         const eventsResult = await eventsResponse.json();
 
         if (bridgeResult.success) {
+          const apiTimestamp = bridgeResult.timestamp || bridgeResult.data[0]?.timestamp;
+          const lastUpdated = apiTimestamp
+            ? new Date(apiTimestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+            : 'Unknown';
+          const freshness: DataFreshness = bridgeResult.fallback
+            ? 'fallback'
+            : bridgeResult.stale
+              ? 'stale'
+              : bridgeResult.cached
+                ? 'cached'
+                : bridgeResult.realTime
+                  ? 'live'
+                  : 'cached';
 
-          // Update current bridge status
           if (bridgeResult.trafficData) {
             const { directions } = bridgeResult.trafficData;
             setBridgeStatus(prev => ({
               ...prev,
               eastbound: directions.eastbound.status.toLowerCase() as LaneStatus,
               westbound: directions.westbound.status.toLowerCase() as LaneStatus,
-              isRealTime: !!bridgeResult.realTime
+              lastUpdated,
+              isRealTime: freshness === 'live',
+              freshness
             }));
             setTrafficData(directions);
           } else if (bridgeResult.data.length > 0) {
-            // Fallback to using latest record
             const latest = bridgeResult.data[0];
             const currentStatus = latest.status.toLowerCase() as LaneStatus;
             setBridgeStatus(prev => ({
               ...prev,
               eastbound: currentStatus,
               westbound: currentStatus,
-              isRealTime: false
+              lastUpdated,
+              isRealTime: false,
+              freshness
             }));
           }
         }
@@ -98,6 +121,11 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
+        setBridgeStatus(prev => ({
+          ...prev,
+          isRealTime: false,
+          freshness: 'error'
+        }));
       } finally {
         setEventsLoading(false);
       }
@@ -106,10 +134,6 @@ export default function Home() {
     fetchBridgeStatusHistory();
 
     const interval = setInterval(() => {
-      setBridgeStatus(prev => ({
-        ...prev,
-        lastUpdated: new Date().toLocaleTimeString()
-      }));
       fetchBridgeStatusHistory();
     }, 1800000); // 30 minutes like the original script
 
@@ -158,6 +182,17 @@ export default function Home() {
     }
   };
 
+  const getFreshnessLabel = (freshness: DataFreshness) => {
+    switch (freshness) {
+      case 'live': return 'Live data';
+      case 'cached': return 'Cached data';
+      case 'stale': return 'Stale data — refreshing';
+      case 'fallback': return 'Fallback data';
+      case 'error': return 'Refresh failed';
+      default: return 'Loading data';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -167,12 +202,27 @@ export default function Home() {
           <p className="text-sm text-muted-foreground mt-2">
             Last updated: {bridgeStatus.lastUpdated}
           </p>
-          {bridgeStatus.isRealTime && (
-            <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-slate-100 border border-green-500 rounded-md">
-              <span className="text-green-600 text-sm font-medium">• Live Data</span>
-            </div>
-          )}
+          <div className={`inline-flex items-center gap-1 mt-2 px-2 py-1 border rounded-md ${
+            bridgeStatus.freshness === 'live'
+              ? 'bg-green-950/30 border-green-500 text-green-400'
+              : bridgeStatus.freshness === 'stale' || bridgeStatus.freshness === 'fallback' || bridgeStatus.freshness === 'error'
+                ? 'bg-yellow-950/30 border-yellow-500 text-yellow-300'
+                : 'bg-slate-900 border-slate-600 text-slate-300'
+          }`}>
+            <span className="text-sm font-medium">• {getFreshnessLabel(bridgeStatus.freshness)}</span>
+          </div>
         </header>
+
+        {(bridgeStatus.freshness === 'stale' || bridgeStatus.freshness === 'fallback' || bridgeStatus.freshness === 'error') && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {bridgeStatus.freshness === 'error'
+                ? 'We could not refresh live data. Please check official travel sources before travelling.'
+                : 'This status is not freshly confirmed. Please check official travel sources before travelling.'}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

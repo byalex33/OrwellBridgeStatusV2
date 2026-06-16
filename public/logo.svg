@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Orwell Bridge Status logo">
+  <rect width="128" height="128" rx="28" fill="#020617"/>
+  <path d="M18 78h92" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+  <path d="M28 78c12-30 60-30 72 0" fill="none" stroke="#f8fafc" stroke-width="8" stroke-linecap="round"/>
+  <path d="M64 28v50" stroke="#f8fafc" stroke-width="8" stroke-linecap="round"/>
+  <path d="M64 34 34 78M64 34l30 44" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="98" cy="30" r="10" fill="#22c55e"/>
+</svg>
