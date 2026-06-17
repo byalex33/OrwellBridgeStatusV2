@@ -2,11 +2,27 @@ import { NextResponse } from 'next/server';
 import { BridgeStatusRecord } from '@/types/bridge';
 import { cache } from '@/lib/cache';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const noStoreHeaders = {
+  'Cache-Control': 'no-store, max-age=0',
+  'CDN-Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'no-store',
+};
+
+function jsonNoStore<T>(body: T, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: noStoreHeaders,
+  });
+}
+
 export async function GET() {
   try {
     const cachedEvents = cache.get<BridgeStatusRecord[] | {message: string}>('events-data');
     if (cachedEvents) {
-      return NextResponse.json(cachedEvents);
+      return jsonNoStore(cachedEvents);
     }
 
     let events: BridgeStatusRecord[] = [];
@@ -37,10 +53,9 @@ export async function GET() {
     } catch (dbError) {
       console.error('MongoDB error in events API:', dbError);
       const fallbackResponse = {
-        message: "No closures or delays in the last 24 hours"
+        message: "Events unavailable"
       };
-      cache.set('events-data', fallbackResponse, 600);
-      return NextResponse.json(fallbackResponse);
+      return jsonNoStore(fallbackResponse, { status: 503 });
     }
 
     if (events.length === 0) {
@@ -48,15 +63,15 @@ export async function GET() {
         message: "No closures or delays in the last 24 hours"
       };
       cache.set('events-data', responseData, 600);
-      return NextResponse.json(responseData);
+      return jsonNoStore(responseData);
     }
 
     cache.set('events-data', events, 600);
-    return NextResponse.json(events);
+    return jsonNoStore(events);
 
   } catch (error) {
     console.error('Events API error:', error);
 
-    return NextResponse.json([]);
+    return jsonNoStore([], { status: 503 });
   }
 }

@@ -69,37 +69,30 @@ function getWeatherIcon(code: number): string {
 }
 
 export async function getWeatherData(): Promise<WeatherData> {
-  try {
-    const response = await axios.get(
-      'https://api.open-meteo.com/v1/forecast',
-      {
-        params: {
-          latitude: 52.0450,
-          longitude: 1.1717,
-          current: 'temperature_2m,wind_speed_10m,wind_direction_10m,weather_code',
-          wind_speed_unit: 'mph'
-        },
-        timeout: 5000
-      }
-    );
+  const response = await axios.get(
+    'https://api.open-meteo.com/v1/forecast',
+    {
+      params: {
+        latitude: 52.0450,
+        longitude: 1.1717,
+        current: 'temperature_2m,wind_speed_10m,wind_direction_10m,weather_code',
+        wind_speed_unit: 'mph'
+      },
+      timeout: 5000
+    }
+  );
 
-    const current = response.data.current;
+  const current = response.data.current;
 
-    return {
-      temperature: Math.round(current.temperature_2m),
-      windSpeed: Math.round(current.wind_speed_10m),
-      windDirection: current.wind_direction_10m || 0,
-      description: getWeatherDescription(current.weather_code),
-      icon: getWeatherIcon(current.weather_code)
-    };
-  } catch (error) {
-    console.error('Weather API error:', error);
-    return {
-      temperature: 12,
-      windSpeed: 25,
-      windDirection: 270,
-      description: 'Weather unavailable',
-      icon: '❓'
-    };
+  if (!current) {
+    throw new Error('Open-Meteo response did not include current weather data');
   }
+
+  return {
+    temperature: Math.round(current.temperature_2m),
+    windSpeed: Math.round(current.wind_speed_10m),
+    windDirection: current.wind_direction_10m || 0,
+    description: getWeatherDescription(current.weather_code),
+    icon: getWeatherIcon(current.weather_code)
+  };
 }

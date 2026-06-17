@@ -53,20 +53,16 @@ export default function Home() {
     const fetchBridgeStatusHistory = async () => {
       try {
         const [bridgeResponse, weatherResponse, eventsResponse] = await Promise.all([
-          fetch('/api/bridge-status'),
-          fetch('/api/weather'),
-          fetch('/api/events')
+          fetch('/api/bridge-status', { cache: 'no-store' }),
+          fetch('/api/weather', { cache: 'no-store' }),
+          fetch('/api/events', { cache: 'no-store' })
         ]);
 
-        if (!bridgeResponse.ok || !weatherResponse.ok || !eventsResponse.ok) {
-          throw new Error('One or more API requests failed');
-        }
+        const bridgeResult = await bridgeResponse.json().catch(() => null) as BridgeStatusResponse | null;
+        const weatherResult = await weatherResponse.json().catch(() => null) as WeatherResponse | null;
+        const eventsResult = await eventsResponse.json().catch(() => null);
 
-        const bridgeResult: BridgeStatusResponse = await bridgeResponse.json();
-        const weatherResult: WeatherResponse = await weatherResponse.json();
-        const eventsResult = await eventsResponse.json();
-
-        if (bridgeResult.success) {
+        if (bridgeResponse.ok && bridgeResult?.success) {
           const apiTimestamp = bridgeResult.timestamp || bridgeResult.data[0]?.timestamp;
           const lastUpdated = apiTimestamp
             ? new Date(apiTimestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -104,17 +100,24 @@ export default function Home() {
               freshness
             }));
           }
+        } else {
+          setBridgeStatus(prev => ({
+            ...prev,
+            lastUpdated: 'Unavailable',
+            isRealTime: false,
+            freshness: 'error'
+          }));
         }
 
-        if (weatherResult.success) {
+        if (weatherResult?.data) {
           setWeather(weatherResult.data);
         }
 
         // Handle events data - could be array of events or message object
 
-        if (Array.isArray(eventsResult)) {
+        if (eventsResponse.ok && Array.isArray(eventsResult)) {
           setPastEvents(eventsResult);
-        } else if (eventsResult && eventsResult.message) {
+        } else if (eventsResponse.ok && eventsResult && eventsResult.message) {
           setPastEvents([]);
         } else {
           setPastEvents([]);
