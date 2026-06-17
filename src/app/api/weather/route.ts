@@ -2,11 +2,27 @@ import { NextResponse } from 'next/server';
 import { getWeatherData } from '@/lib/weather';
 import { cache } from '@/lib/cache';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const noStoreHeaders = {
+  'Cache-Control': 'no-store, max-age=0',
+  'CDN-Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'no-store',
+};
+
+function jsonNoStore<T>(body: T, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: noStoreHeaders,
+  });
+}
+
 export async function GET() {
   try {
     const cachedWeather = cache.get<{temperature: number, windSpeed: number, windDirection: number, description: string, icon: string}>('weather-data');
     if (cachedWeather) {
-      return NextResponse.json({
+      return jsonNoStore({
         success: true,
         data: cachedWeather,
         cached: true
@@ -17,7 +33,7 @@ export async function GET() {
 
     cache.set('weather-data', weatherData, 900);
 
-    return NextResponse.json({
+    return jsonNoStore({
       success: true,
       data: weatherData,
       realTime: true,
@@ -36,7 +52,7 @@ export async function GET() {
 
     const cachedWeather = cache.get<{temperature: number, windSpeed: number, windDirection: number, description: string, icon: string}>('weather-data');
     if (cachedWeather) {
-      return NextResponse.json({
+      return jsonNoStore({
         success: true,
         data: cachedWeather,
         fallback: true,
@@ -52,7 +68,7 @@ export async function GET() {
       icon: '❓'
     };
 
-    return NextResponse.json({
+    return jsonNoStore({
       success: false,
       error: 'Failed to fetch weather data',
       data: fallbackData,
@@ -64,6 +80,6 @@ export async function GET() {
           icon: fallbackData.icon
         }
       }
-    });
+    }, { status: 503 });
   }
 }

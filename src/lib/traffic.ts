@@ -38,6 +38,13 @@ interface TomTomResponse {
   flowSegmentData: TomTomSegmentData;
 }
 
+export class TrafficDataUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TrafficDataUnavailableError';
+  }
+}
+
 function validateCoordinates(point: string): boolean {
   const [lat, lon] = point.split(',').map(Number);
   return !isNaN(lat) && !isNaN(lon) &&
@@ -123,8 +130,13 @@ export async function getBridgeTrafficData(): Promise<{
   overallStatus: OverallStatus;
   timestamp: Date;
 }> {
+  if (!process.env.TOMTOM_API_KEY) {
+    throw new TrafficDataUnavailableError('Missing TOMTOM_API_KEY environment variable');
+  }
+
   const directions = ['eastbound', 'westbound'] as const;
   const directionalStatus = {} as DirectionalStatus;
+  const failedDirections: string[] = [];
 
   for (const direction of directions) {
     const point = BRIDGE_POINTS[direction].point;
@@ -144,12 +156,17 @@ export async function getBridgeTrafficData(): Promise<{
         }
       );
 
+      if (!trafficResponse.data?.flowSegmentData) {
+        throw new Error('TomTom response did not include flowSegmentData');
+      }
+
       directionalStatus[direction] = {
         ...analyzeBridgeStatus(trafficResponse.data),
         description: BRIDGE_POINTS[direction].description
       };
     } catch (error) {
       console.error(`Error fetching traffic data for ${direction}:`, error);
+      failedDirections.push(direction);
       directionalStatus[direction] = {
         status: 'UNKNOWN',
         details: `Unable to fetch traffic data for ${direction} direction`,
@@ -157,6 +174,10 @@ export async function getBridgeTrafficData(): Promise<{
         description: BRIDGE_POINTS[direction].description
       };
     }
+  }
+
+  if (failedDirections.length === directions.length) {
+    throw new TrafficDataUnavailableError('Unable to fetch TomTom traffic data for either direction');
   }
 
   const overallStatus = determineOverallStatus(directionalStatus);
