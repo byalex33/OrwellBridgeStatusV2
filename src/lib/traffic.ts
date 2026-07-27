@@ -85,7 +85,9 @@ function analyzeBridgeStatus(trafficData: unknown): Omit<TrafficData, 'descripti
       averageSpeed
     };
   } catch (error) {
-    console.error('Error analyzing bridge status:', error);
+    console.error('Error analyzing bridge status', {
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
     return {
       status: 'UNKNOWN',
       details: 'Unable to determine bridge status',
@@ -165,7 +167,9 @@ export async function getBridgeTrafficData(): Promise<{
         description: BRIDGE_POINTS[direction].description
       };
     } catch (error) {
-      console.error(`Error fetching traffic data for ${direction}:`, error);
+      console.error(`Error fetching traffic data for ${direction}`, {
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
       failedDirections.push(direction);
       directionalStatus[direction] = {
         status: 'UNKNOWN',

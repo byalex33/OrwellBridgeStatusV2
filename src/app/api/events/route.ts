@@ -33,8 +33,13 @@ export async function GET() {
       const db = client.db('paststatus');
       const collection = db.collection('bridgeevents');
 
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
       const records = await collection
-        .find({ status: { $in: ['CLOSED', 'DELAYS', 'DELAYED'] } })
+        .find({
+          status: { $in: ['CLOSED', 'DELAYS', 'DELAYED'] },
+          timestamp: { $gte: since }
+        })
         .sort({ timestamp: -1 })
         .limit(5)
         .toArray();
@@ -51,7 +56,9 @@ export async function GET() {
 
 
     } catch (dbError) {
-      console.error('MongoDB error in events API:', dbError);
+      console.error('MongoDB error in events API', {
+        message: dbError instanceof Error ? dbError.message : 'Unknown error'
+      });
       const fallbackResponse = {
         message: "Events unavailable"
       };
@@ -70,7 +77,9 @@ export async function GET() {
     return jsonNoStore(events);
 
   } catch (error) {
-    console.error('Events API error:', error);
+    console.error('Events API error', {
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
 
     return jsonNoStore([], { status: 503 });
   }

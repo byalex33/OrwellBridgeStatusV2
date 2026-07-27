@@ -48,7 +48,9 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Weather API error:', error);
+    console.error('Weather API error', {
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
 
     const cachedWeather = cache.get<{temperature: number, windSpeed: number, windDirection: number, description: string, icon: string}>('weather-data');
     if (cachedWeather) {

@@ -175,7 +175,9 @@ async function refreshBridgeData() {
     try {
       historicalRecords = await saveCurrentRecord(currentRecord);
     } catch (dbError) {
-      console.error('MongoDB error during background refresh:', dbError);
+      console.error('MongoDB error during background refresh', {
+        message: dbError instanceof Error ? dbError.message : 'Unknown error'
+      });
     }
 
     const allRecords = [currentRecord, ...historicalRecords];
@@ -183,7 +185,9 @@ async function refreshBridgeData() {
 
     console.log('Background refresh completed');
   } catch (error) {
-    console.error('Background refresh failed:', error);
+    console.error('Background refresh failed', {
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
 
@@ -204,7 +208,11 @@ export async function GET() {
     }
 
     if (cacheResult.data && cacheResult.isStale) {
-      refreshBridgeData().catch(console.error);
+      refreshBridgeData().catch((error) => {
+        console.error('Background bridge refresh failed', {
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      });
 
       return jsonNoStore({
         success: true,
@@ -225,7 +233,9 @@ export async function GET() {
     try {
       historicalRecords = await saveCurrentRecord(currentRecord);
     } catch (dbError) {
-      console.error('MongoDB error while saving bridge status:', dbError);
+      console.error('MongoDB error, using limited historical data', {
+        message: dbError instanceof Error ? dbError.message : 'Unknown error'
+      });
     }
 
     const allRecords = [currentRecord, ...historicalRecords];
@@ -242,7 +252,9 @@ export async function GET() {
       trafficData: cacheEntry.trafficData,
     });
   } catch (error) {
-    console.error('Failed to fetch real traffic data:', error);
+    console.error('Failed to fetch real traffic data, using fallback', {
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
 
     const cachedData = cache.get<BridgeCacheEntry>('bridge-status');
     if (cachedData) {
