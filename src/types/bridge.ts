@@ -5,6 +5,8 @@ export interface BridgeStatusRecord {
   description: string;
   direction: 'both' | 'north' | 'south' | 'eastbound' | 'westbound';
   averageSpeed: number;
+  /** Missing on legacy records whose measurement unit is unknown. */
+  speedUnit?: 'mph';
   __v: number;
 }
 

@@ -23,6 +23,7 @@ type DbBridgeRecord = {
   description?: string;
   direction?: string;
   averageSpeed?: number;
+  speedUnit?: 'mph';
   __v?: number;
 };
 
@@ -88,6 +89,7 @@ function mapBridgeRecord(record: DbBridgeRecord): BridgeStatusRecord {
     description: record.description || 'No description available',
     direction: normalizeDirection(record.direction),
     averageSpeed: record.averageSpeed || 0,
+    speedUnit: record.speedUnit === 'mph' ? 'mph' : undefined,
     __v: record.__v || 0,
   };
 }
@@ -120,6 +122,7 @@ function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTraf
     timestamp: trafficData.timestamp.toISOString(),
     description: trafficData.overallStatus.details,
     direction: 'both',
+    speedUnit: 'mph',
     averageSpeed: Math.round(
       (trafficData.directions.eastbound.averageSpeed + trafficData.directions.westbound.averageSpeed) / 2
     ),
@@ -137,6 +140,7 @@ async function saveCurrentRecord(currentRecord: BridgeStatusRecord): Promise<Bri
     description: currentRecord.description,
     direction: currentRecord.direction,
     averageSpeed: currentRecord.averageSpeed,
+    speedUnit: currentRecord.speedUnit,
   });
   console.log('MongoDB insert result:', insertResult.insertedId);
 
