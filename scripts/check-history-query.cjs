@@ -21,7 +21,7 @@ function load(path, dependencies = {}) {
 const route = load('src/app/api/events/route.ts', {
   'next/server': { NextResponse: { json: body => body } },
   '@/lib/records': load('src/lib/records.ts'),
-  '@/lib/cache': { cache: { get: () => null, set: () => {} } },
+  '@/lib/cache': { cache: { get: () => null, set: () => {}, getOrFetch: (_key, fn) => fn() } },
   '@/lib/mongodb': { default: () => Promise.resolve({ db: () => ({ collection: () => collection }) }) },
 });
 route.GET().then(records => {
