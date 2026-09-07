@@ -45,6 +45,16 @@ Run the regression scripts in `scripts/check-*.cjs` with Node after the build. C
 
 ## Deployment
 
+### Install on a phone (PWA)
+
+Serve over HTTPS (localhost also works for development). In Safari on iPhone/iPad, use Share → Add to Home Screen, enable Open as Web App if offered, then Add. In Chrome on Android, use the menu → Install app / Add to Home screen. The dashboard includes these instructions and hides them when opened in standalone mode.
+
+The Next.js manifest supplies the name and 192/512px icons. The service worker registers without requesting notifications. After its first online activation, failed page navigations show an offline message with a retry link. It never caches live pages or API responses; current bridge conditions require an internet connection.
+
+Run `node scripts/check-pwa.cjs` for manifest, icon and worker checks. After deployment, install on a real phone and reopen in airplane mode to verify the offline screen.
+
+### Hosting
+
 Use the existing Vercel project linked above. Check the project name and connected repository before importing or linking a checkout: a local `.vercel` directory can refer to a different project. Put server credentials in that project's environment settings with the intended Production/Preview scope. When deployment is enabled, pull requests create previews and merging to `master` deploys production through the GitHub integration. Respect paused deployments; canceled or missing deployment checks do not prove that a release passed.
 
 Open issues and pull requests in the repository linked above. Traffic evidence is provided by configured TomTom, HERE and National Highways integrations; weather estimates come from Open-Meteo.
