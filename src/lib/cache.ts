@@ -71,11 +71,13 @@ class SimpleCache {
 
     // Create new request
     const promise = Promise.resolve().then(fetchFn).then(data => {
-      this.set(key, data, ttlSeconds, staleSeconds);
-      this.pendingRequests.delete(key);
+      if (this.pendingRequests.get(key) === promise) {
+        this.set(key, data, ttlSeconds, staleSeconds);
+        this.pendingRequests.delete(key);
+      }
       return data;
     }).catch(error => {
-      this.pendingRequests.delete(key);
+      if (this.pendingRequests.get(key) === promise) this.pendingRequests.delete(key);
       throw error;
     });
 
