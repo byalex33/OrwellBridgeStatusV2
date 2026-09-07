@@ -12,3 +12,4 @@ for (const timestamp of [new Date('2026-01-02T03:04:05Z'), '2026-01-02T03:04:05Z
 for (const timestamp of [undefined, '', 'bad', new Date(NaN)]) assert.equal(mapBridgeRecord({ timestamp }), null);
 assert.equal(mapBridgeRecord({ timestamp: '2026-01-01', status: 'DELAYED' }).status, 'DELAYED');
 console.log('Record normalization checks passed');
+assert.equal(mapBridgeRecord({ timestamp: '2026-01-01', speedUnit: 'mph', averageSpeed: 40 }).speedUnit, 'mph');

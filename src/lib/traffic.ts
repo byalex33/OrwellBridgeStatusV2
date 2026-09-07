@@ -152,6 +152,7 @@ export async function getBridgeTrafficData(): Promise<{
         {
           params: {
             point: point,
+            unit: 'mph',
             key: process.env.TOMTOM_API_KEY
           },
           timeout: 5000
@@ -192,3 +193,4 @@ export async function getBridgeTrafficData(): Promise<{
     timestamp: new Date()
   };
 }
+
