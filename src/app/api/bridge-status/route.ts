@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { BridgeStatusRecord } from '@/types/bridge';
 import { getBridgeTrafficData } from '@/lib/traffic';
 import type { DirectionalStatus, OverallStatus } from '@/lib/traffic';
+import { mapBridgeRecord, type DbBridgeRecord } from '@/lib/records';
 import { cache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
@@ -14,17 +15,6 @@ type BridgeCacheEntry = {
     directions: DirectionalStatus;
     overallStatus: OverallStatus;
   };
-};
-
-type DbBridgeRecord = {
-  _id?: { toString(): string };
-  status?: string;
-  timestamp?: Date | string;
-  description?: string;
-  direction?: string;
-  averageSpeed?: number | null;
-  speedUnit?: 'mph';
-  __v?: number;
 };
 
 const noStoreHeaders = {
@@ -40,60 +30,6 @@ function jsonNoStore<T>(body: T, init?: ResponseInit) {
   });
 }
 
-function normalizeStatus(status: string | undefined): BridgeStatusRecord['status'] {
-  if (status === 'CLOSED' || status === 'DELAYED' || status === 'OPEN' || status === 'UNKNOWN') {
-    return status;
-  }
-
-  if (status === 'DELAYS') {
-    return 'DELAYED';
-  }
-
-  return 'UNKNOWN';
-}
-
-function normalizeDirection(direction: string | undefined): BridgeStatusRecord['direction'] {
-  if (
-    direction === 'both' ||
-    direction === 'north' ||
-    direction === 'south' ||
-    direction === 'eastbound' ||
-    direction === 'westbound'
-  ) {
-    return direction;
-  }
-
-  return 'both';
-}
-
-function normalizeTimestamp(timestamp: Date | string | undefined): string {
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-
-  if (timestamp) {
-    const parsed = new Date(timestamp);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString();
-    }
-  }
-
-  return new Date().toISOString();
-}
-
-function mapBridgeRecord(record: DbBridgeRecord): BridgeStatusRecord {
-  return {
-    _id: record._id?.toString() || `record_${normalizeTimestamp(record.timestamp)}`,
-    status: normalizeStatus(record.status),
-    timestamp: normalizeTimestamp(record.timestamp),
-    description: record.description || 'No description available',
-    direction: normalizeDirection(record.direction),
-    averageSpeed: record.speedUnit === 'mph' ? record.averageSpeed ?? null : null,
-    speedUnit: record.speedUnit === 'mph' ? 'mph' : undefined,
-    __v: record.__v || 0,
-  };
-}
-
 async function getBridgeCollection() {
   const clientPromise = import('@/lib/mongodb').then((m) => m.default);
   const client = await clientPromise;
@@ -104,14 +40,17 @@ async function getBridgeCollection() {
 async function fetchHistoricalRecords(limit: number, excludedId?: string): Promise<BridgeStatusRecord[]> {
   const collection = await getBridgeCollection();
   const records = await collection
-    .find({})
-    .sort({ timestamp: -1 })
-    .limit(excludedId ? limit + 1 : limit)
+    .aggregate<DbBridgeRecord>([
+      { $set: { timestamp: { $convert: { input: '$timestamp', to: 'date', onError: null, onNull: null } } } },
+      { $match: { timestamp: { $ne: null } } },
+      { $sort: { timestamp: -1 } },
+      { $limit: excludedId ? limit + 1 : limit },
+    ])
     .toArray();
 
   return records
     .map(mapBridgeRecord)
-    .filter((record) => record._id !== excludedId)
+    .filter((record): record is BridgeStatusRecord => record !== null && record._id !== excludedId)
     .slice(0, limit);
 }
 
