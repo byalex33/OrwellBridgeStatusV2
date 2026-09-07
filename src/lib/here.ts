@@ -33,9 +33,9 @@ interface HereResponse {
 }
 
 export function analyzeHereFlow(results: HereFlowResult[]): Omit<HereTrafficData, 'description'> {
-  const closed = results.some(r => r.currentFlow?.traversability === 'closed' || r.currentFlow?.jamFactor === 10);
+  const closed = results.some(r => r?.currentFlow?.traversability === 'closed' || r?.currentFlow?.jamFactor === 10);
   if (closed) return { status: 'CLOSED', details: 'HERE reports a road closure', averageSpeed: 0 };
-  const valid = results.filter(r => typeof r.currentFlow?.speed === 'number' &&
+  const valid = results.filter(r => typeof r?.currentFlow?.speed === 'number' &&
     Number.isFinite(r.currentFlow.speed) && r.currentFlow.speed >= 0 &&
     typeof r.currentFlow.jamFactor === 'number' && Number.isFinite(r.currentFlow.jamFactor) &&
     r.currentFlow.jamFactor >= 0 && r.currentFlow.jamFactor < 10 &&
@@ -45,8 +45,8 @@ export function analyzeHereFlow(results: HereFlowResult[]): Omit<HereTrafficData
     return { status: 'UNKNOWN', details: 'No HERE flow data returned', averageSpeed: 0 };
   }
 
-  const worstJam = Math.max(...valid.map(r => r.currentFlow?.jamFactor ?? 0));
-  const avgSpeedMs = valid.reduce((sum, r) => sum + (r.currentFlow?.speed ?? 0), 0) / valid.length;
+  const worstJam = Math.max(...valid.map(r => r?.currentFlow?.jamFactor ?? 0));
+  const avgSpeedMs = valid.reduce((sum, r) => sum + (r?.currentFlow?.speed ?? 0), 0) / valid.length;
   const avgSpeedMph = Math.round(avgSpeedMs * 2.237);
   if (worstJam >= 4 || avgSpeedMs === 0) {
     return { status: 'DELAYED', details: 'HERE: Significant traffic delays detected', averageSpeed: avgSpeedMph };
@@ -67,10 +67,11 @@ export async function getHereTrafficData(): Promise<HereDirectionalStatus> {
   for (const direction of ['eastbound', 'westbound'] as const) {
     const flows = response.data.results.filter(flow => {
       const links = flow?.location?.shape?.links;
-      return Array.isArray(links) && links.some(link => Array.isArray(link.points) && crossingDirection(link.points) === direction);
+      return Array.isArray(links) && links.some(link => Array.isArray(link?.points) && crossingDirection(link.points) === direction);
     });
     result[direction] = { ...analyzeHereFlow(flows), description: `A14 ${direction} (HERE)` };
   }
   return result;
 }
+
 
