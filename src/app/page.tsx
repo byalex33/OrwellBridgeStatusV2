@@ -355,7 +355,7 @@ export default function Home() {
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
             Weather
           </h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-xl border border-border/50 bg-card p-4">
               <div className="flex items-center gap-1.5 text-muted-foreground mb-3">
                 <Thermometer className="h-3.5 w-3.5" />
@@ -421,13 +421,13 @@ export default function Home() {
                 return (
                   <div
                     key={record._id}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
+                    className="grid grid-cols-[auto_minmax(0,1fr)] sm:flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
                   >
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getEventDot(record.status)}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate">{eventDescription(record)}</p>
+                      <p className="text-sm text-foreground break-words">{eventDescription(record)}</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 text-xs text-muted-foreground">
+                    <div className="col-start-2 flex flex-wrap items-center gap-3 sm:shrink-0 text-xs text-muted-foreground">
                       {record.averageSpeed != null && (
                         <div className="flex items-center gap-1 font-mono">
                           <Gauge className="h-3 w-3" />
