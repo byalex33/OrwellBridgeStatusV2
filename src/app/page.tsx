@@ -310,7 +310,7 @@ export default function Home() {
                     <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                       {direction}
                     </div>
-                    <div className="text-xs text-muted-foreground/60 mt-0.5">{route}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{route}</div>
                   </div>
                   {traffic?.averageSpeed != null && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
@@ -435,13 +435,13 @@ export default function Home() {
                         </div>
                       )}
                       <span className="px-1.5 py-0.5 rounded bg-muted/60">{record.direction}</span>
-                      <span className="font-mono opacity-60">{date} {time}</span>
+                      <span className="font-mono">{date} {time}</span>
                     </div>
                   </div>
                 );
               })}
               {pastEvents.length > 5 && (
-                <div className="px-4 py-3 text-center text-xs text-muted-foreground/60">
+                <div className="px-4 py-3 text-center text-xs text-muted-foreground">
                   Showing 5 of {pastEvents.length} events
                 </div>
               )}
@@ -455,7 +455,7 @@ export default function Home() {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             Created with <Heart className="h-3.5 w-3.5 text-rose-400 fill-rose-400 mx-0.5" /> by Alex
           </div>
-          <p className="text-xs text-muted-foreground/50">Data: TomTom Traffic API · Open-Meteo</p>
+          <p className="text-xs text-muted-foreground">Data: TomTom Traffic API · Open-Meteo</p>
           <a
             href="https://ko-fi.com/alexbaldry"
             target="_blank"
@@ -470,3 +470,4 @@ export default function Home() {
     </div>
   );
 }
+
