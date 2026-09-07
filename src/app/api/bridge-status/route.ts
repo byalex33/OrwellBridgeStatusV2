@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 type BridgeCacheEntry = {
+  historyScheduled?: boolean;
   records: BridgeStatusRecord[];
   timestamp: Date;
   trafficData: {
@@ -94,6 +95,20 @@ function makeCacheEntry(
   };
 }
 
+function scheduleHistory(entry: BridgeCacheEntry) {
+  if (entry.historyScheduled) return;
+  entry.historyScheduled = true;
+  after(async () => {
+    try {
+      const client = await (await import('@/lib/mongodb')).default();
+      await saveBridgeTransition(client, entry.records[0], entry.trafficData.directions);
+    } catch (error) {
+      entry.historyScheduled = false;
+      console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+}
+
 export async function GET() {
   let retainedEntry: BridgeCacheEntry | null = null;
   try {
@@ -101,6 +116,7 @@ export async function GET() {
     retainedEntry = cacheResult.data;
 
     if (cacheResult.data && !cacheResult.isStale) {
+      scheduleHistory(cacheResult.data);
       return jsonNoStore({
         success: true,
         data: cacheResult.data.records,
@@ -114,16 +130,9 @@ export async function GET() {
     const cacheEntry = await cache.getOrFetch('bridge-status', async () => {
       const trafficData = await getBridgeTrafficData();
       const currentRecord = buildCurrentRecord(trafficData);
-      after(async () => {
-        try {
-          const client = await (await import('@/lib/mongodb')).default();
-          await saveBridgeTransition(client, currentRecord, trafficData.directions);
-        } catch (error) {
-          console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
-        }
-      });
       return makeCacheEntry([currentRecord], trafficData);
     }, 600, 300);
+    scheduleHistory(cacheEntry);
 
     return jsonNoStore({
       success: true,
@@ -139,6 +148,7 @@ export async function GET() {
 
     const cachedData = cache.get<BridgeCacheEntry>('bridge-status') ?? retainedEntry;
     if (cachedData) {
+      scheduleHistory(cachedData);
       return jsonNoStore({
         success: true,
         data: cachedData.records,

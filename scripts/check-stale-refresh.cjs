@@ -13,7 +13,7 @@ const timestamp = new Date(now);
 cache.set('bridge-status', { records: [{ timestamp: timestamp.toISOString() }], timestamp, trafficData: { directions: {}, overallStatus: {} } }, 600, 300);
 now += 599000;
 const route = load('src/app/api/bridge-status/route.ts', {
-  'next/server': { NextResponse: { json: body => body } },
+  'next/server': { after: () => {}, NextResponse: { json: body => body } },
   '@/lib/cache': { cache },
   '@/lib/records': {},
   '@/lib/traffic': { getBridgeTrafficData: async () => { now += 2000; throw Error('offline'); } },
