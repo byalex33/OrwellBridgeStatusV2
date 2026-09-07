@@ -65,12 +65,15 @@ function analyzeBridgeStatus(trafficData: unknown): Omit<TrafficData, 'descripti
     const segment = (trafficData as TomTomResponse).flowSegmentData;
     let status: 'OPEN' | 'DELAYED' | 'CLOSED' | 'UNKNOWN';
     let details: string;
-    const averageSpeed = segment.currentSpeed || 0;
-    const freeFlowSpeed = segment.freeFlowSpeed || 70;
+    const averageSpeed = segment.currentSpeed;
+    const freeFlowSpeed = segment.freeFlowSpeed;
 
-    if (segment.roadClosure || averageSpeed === 0) {
+    if (segment.roadClosure === true) {
       status = 'CLOSED';
       details = 'Bridge is currently closed to traffic';
+    } else if (typeof averageSpeed !== 'number' || !Number.isFinite(averageSpeed) || averageSpeed < 0 ||
+      typeof freeFlowSpeed !== 'number' || !Number.isFinite(freeFlowSpeed) || freeFlowSpeed <= 0) {
+      return { status: 'UNKNOWN', details: 'TomTom speed data unavailable', averageSpeed: 0 };
     } else if (averageSpeed < freeFlowSpeed * 0.3) {
       status = 'DELAYED';
       details = 'Bridge is open but experiencing significant delays';
@@ -82,7 +85,7 @@ function analyzeBridgeStatus(trafficData: unknown): Omit<TrafficData, 'descripti
     return {
       status,
       details,
-      averageSpeed
+      averageSpeed: averageSpeed ?? 0
     };
   } catch (error) {
     console.error('Error analyzing bridge status', {
@@ -193,3 +196,5 @@ export async function getBridgeTrafficData(): Promise<{
     timestamp: new Date()
   };
 }
+
+
