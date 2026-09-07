@@ -61,7 +61,7 @@ class SimpleCache {
   ): Promise<T> {
     // Check if we have fresh data
     const cached = this.getWithStale<T>(key);
-    if (cached.data !== null && !cached.isStale) return cached.data;
+    if (this.cache.has(key) && !cached.isStale) return cached.data as T;
 
     // Check if there's already a pending request for this key
     const pending = this.pendingRequests.get(key);
