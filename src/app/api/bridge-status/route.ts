@@ -37,20 +37,20 @@ async function getBridgeCollection() {
   return db.collection<DbBridgeRecord>('bridgeevents');
 }
 
-async function fetchHistoricalRecords(limit: number, excludedId?: string): Promise<BridgeStatusRecord[]> {
+async function fetchHistoricalRecords(limit: number): Promise<BridgeStatusRecord[]> {
   const collection = await getBridgeCollection();
   const records = await collection
     .aggregate<DbBridgeRecord>([
       { $set: { timestamp: { $convert: { input: '$timestamp', to: 'date', onError: null, onNull: null } } } },
       { $match: { timestamp: { $ne: null } } },
       { $sort: { timestamp: -1 } },
-      { $limit: excludedId ? limit + 1 : limit },
+      { $limit: limit },
     ])
     .toArray();
 
   return records
     .map(mapBridgeRecord)
-    .filter((record): record is BridgeStatusRecord => record !== null && record._id !== excludedId)
+    .filter((record): record is BridgeStatusRecord => record !== null)
     .slice(0, limit);
 }
 
@@ -69,7 +69,7 @@ function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTraf
   };
 }
 
-async function saveCurrentRecord(currentRecord: BridgeStatusRecord): Promise<BridgeStatusRecord[]> {
+async function saveCurrentRecord(currentRecord: BridgeStatusRecord): Promise<void> {
   const collection = await getBridgeCollection();
 
   console.log('Saving current status to MongoDB:', currentRecord.status);
@@ -83,12 +83,11 @@ async function saveCurrentRecord(currentRecord: BridgeStatusRecord): Promise<Bri
   });
   console.log('MongoDB insert result:', insertResult.insertedId);
 
-  return fetchHistoricalRecords(19, insertResult.insertedId.toString());
 }
 
 async function getDatabaseFallbackRecords(): Promise<BridgeStatusRecord[]> {
   try {
-    return await fetchHistoricalRecords(20);
+    return await fetchHistoricalRecords(1);
   } catch (dbError) {
     console.error('MongoDB fallback lookup failed:', dbError);
     return [];
@@ -114,16 +113,15 @@ async function refreshBridgeData() {
     const trafficData = await getBridgeTrafficData();
     const currentRecord = buildCurrentRecord(trafficData);
 
-    let historicalRecords: BridgeStatusRecord[] = [];
     try {
-      historicalRecords = await saveCurrentRecord(currentRecord);
+      await saveCurrentRecord(currentRecord);
     } catch (dbError) {
       console.error('MongoDB error during background refresh', {
         message: dbError instanceof Error ? dbError.message : 'Unknown error'
       });
     }
 
-    const allRecords = [currentRecord, ...historicalRecords];
+    const allRecords = [currentRecord];
     cache.set('bridge-status', makeCacheEntry(allRecords, trafficData), 600, 300);
 
     console.log('Background refresh completed');
@@ -145,8 +143,6 @@ export async function GET() {
         cached: true,
         timestamp: cacheResult.data.timestamp,
         trafficData: cacheResult.data.trafficData,
-        directions: cacheResult.data.trafficData.directions,
-        overallStatus: cacheResult.data.trafficData.overallStatus,
       });
     }
 
@@ -164,24 +160,21 @@ export async function GET() {
         stale: true,
         timestamp: cacheResult.data.timestamp,
         trafficData: cacheResult.data.trafficData,
-        directions: cacheResult.data.trafficData.directions,
-        overallStatus: cacheResult.data.trafficData.overallStatus,
       });
     }
 
     const trafficData = await getBridgeTrafficData();
     const currentRecord = buildCurrentRecord(trafficData);
 
-    let historicalRecords: BridgeStatusRecord[] = [];
     try {
-      historicalRecords = await saveCurrentRecord(currentRecord);
+      await saveCurrentRecord(currentRecord);
     } catch (dbError) {
       console.error('MongoDB error, using limited historical data', {
         message: dbError instanceof Error ? dbError.message : 'Unknown error'
       });
     }
 
-    const allRecords = [currentRecord, ...historicalRecords];
+    const allRecords = [currentRecord];
     const cacheEntry = makeCacheEntry(allRecords, trafficData);
     cache.set('bridge-status', cacheEntry, 600, 300);
 
@@ -190,8 +183,6 @@ export async function GET() {
       data: allRecords,
       realTime: true,
       timestamp: trafficData.timestamp,
-      directions: trafficData.directions,
-      overallStatus: trafficData.overallStatus,
       trafficData: cacheEntry.trafficData,
     });
   } catch (error) {
@@ -208,8 +199,6 @@ export async function GET() {
         cached: true,
         timestamp: cachedData.timestamp,
         trafficData: cachedData.trafficData,
-        directions: cachedData.trafficData.directions,
-        overallStatus: cachedData.trafficData.overallStatus,
       });
     }
 
