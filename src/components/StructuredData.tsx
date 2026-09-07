@@ -1,4 +1,4 @@
-export default function StructuredData() {
+export default function StructuredData({ nonce }: { nonce?: string }) {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -92,6 +92,7 @@ export default function StructuredData() {
   return (
     <script
       type="application/ld+json"
+      nonce={nonce}
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
   );
