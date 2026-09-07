@@ -45,6 +45,9 @@ const tick = () => new Promise(setImmediate);
   const history=dashboard(async path=>response(path.includes('events')?(eventsFail?{message:'unavailable'}:[{_id:'fixture',status:'CLOSED',description:'Recorded closure',direction:'eastbound',timestamp:new Date().toISOString()}]):{},!eventsFail));
   await tick();eventsFail=true;history.poll();await tick();
   assert.match(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);assert.doesNotMatch(history.render(),/No recent events found/);history.cleanup();
+  for (const [direction, expected] of [['eastbound','Bridge closed eastbound'],['westbound','Bridge closed westbound'],['both','Bridge closed in both directions'],['north','Bridge closed in at least one direction']]) {
+    const legacy=dashboard(async path=>response(path.includes('events')?[{_id:'legacy',status:'CLOSED',direction,description:'Bridge closed in at least one direction',timestamp:new Date().toISOString()}]:{}));await tick();assert.ok(legacy.render().includes(expected));legacy.cleanup();
+  }
   console.log('F08/F09/F10/F14/F16: independent panel updates, pending-request overlap guard passed');
   console.log('F08/F09/F10/F14: independent panel updates, pending-request overlap guard passed');
   console.log('F08/F09/F14: independent panel updates, pending-request overlap guard passed');
