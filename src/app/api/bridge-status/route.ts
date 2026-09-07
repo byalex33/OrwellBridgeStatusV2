@@ -114,7 +114,8 @@ export async function GET() {
       const currentRecord = buildCurrentRecord(trafficData);
       after(async () => {
         try {
-          await saveBridgeTransition(await getBridgeCollection(), currentRecord, trafficData.directions);
+          const client = await (await import('@/lib/mongodb')).default();
+          await saveBridgeTransition(client, currentRecord, trafficData.directions);
         } catch (error) {
           console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
         }
