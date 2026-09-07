@@ -1,7 +1,9 @@
 import type { BridgeStatusRecord } from '@/types/bridge';
 
 export type DbBridgeRecord = {
-  _id?: { toString(): string };
+  _id?: string | { toString(): string };
+  eastboundStatus?: string;
+  westboundStatus?: string;
   status?: string;
   timestamp?: Date | string;
   description?: string;

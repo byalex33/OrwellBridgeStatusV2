@@ -3,12 +3,14 @@ import { BridgeStatusRecord } from '@/types/bridge';
 import { getBridgeTrafficData } from '@/lib/traffic';
 import type { DirectionalStatus, OverallStatus } from '@/lib/traffic';
 import { mapBridgeRecord, type DbBridgeRecord } from '@/lib/records';
+import { saveBridgeTransition } from '@/lib/history';
 import { cache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 type BridgeCacheEntry = {
+  historyScheduled?: boolean;
   records: BridgeStatusRecord[];
   timestamp: Date;
   trafficData: {
@@ -60,29 +62,14 @@ function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTraf
     status: trafficData.overallStatus.status,
     timestamp: trafficData.timestamp.toISOString(),
     description: trafficData.overallStatus.details,
-    direction: 'both',
+    direction: trafficData.directions.eastbound.status === trafficData.overallStatus.status && trafficData.directions.westbound.status !== trafficData.overallStatus.status ? 'eastbound'
+      : trafficData.directions.westbound.status === trafficData.overallStatus.status && trafficData.directions.eastbound.status !== trafficData.overallStatus.status ? 'westbound' : 'both',
     speedUnit: 'mph',
     averageSpeed: trafficData.directions.eastbound.averageSpeed == null || trafficData.directions.westbound.averageSpeed == null ? null : Math.round(
       (trafficData.directions.eastbound.averageSpeed + trafficData.directions.westbound.averageSpeed) / 2
     ),
     __v: 0,
   };
-}
-
-async function saveCurrentRecord(currentRecord: BridgeStatusRecord): Promise<void> {
-  const collection = await getBridgeCollection();
-
-  console.log('Saving current status to MongoDB:', currentRecord.status);
-  const insertResult = await collection.insertOne({
-    status: currentRecord.status,
-    timestamp: new Date(currentRecord.timestamp),
-    description: currentRecord.description,
-    direction: currentRecord.direction,
-    averageSpeed: currentRecord.averageSpeed,
-    speedUnit: currentRecord.speedUnit,
-  });
-  console.log('MongoDB insert result:', insertResult.insertedId);
-
 }
 
 async function getDatabaseFallbackRecords(): Promise<BridgeStatusRecord[]> {
@@ -108,6 +95,20 @@ function makeCacheEntry(
   };
 }
 
+function scheduleHistory(entry: BridgeCacheEntry) {
+  if (entry.historyScheduled) return;
+  entry.historyScheduled = true;
+  after(async () => {
+    try {
+      const client = await (await import('@/lib/mongodb')).default();
+      await saveBridgeTransition(client, entry.records[0], entry.trafficData.directions);
+    } catch (error) {
+      entry.historyScheduled = false;
+      console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+}
+
 export async function GET() {
   let retainedEntry: BridgeCacheEntry | null = null;
   try {
@@ -115,6 +116,7 @@ export async function GET() {
     retainedEntry = cacheResult.data;
 
     if (cacheResult.data && !cacheResult.isStale) {
+      scheduleHistory(cacheResult.data);
       return jsonNoStore({
         success: true,
         data: cacheResult.data.records,
@@ -128,15 +130,9 @@ export async function GET() {
     const cacheEntry = await cache.getOrFetch('bridge-status', async () => {
       const trafficData = await getBridgeTrafficData();
       const currentRecord = buildCurrentRecord(trafficData);
-      after(async () => {
-        try {
-          await saveCurrentRecord(currentRecord);
-        } catch (error) {
-          console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
-        }
-      });
       return makeCacheEntry([currentRecord], trafficData);
     }, 600, 300);
+    scheduleHistory(cacheEntry);
 
     return jsonNoStore({
       success: true,
@@ -152,6 +148,7 @@ export async function GET() {
 
     const cachedData = cache.get<BridgeCacheEntry>('bridge-status') ?? retainedEntry;
     if (cachedData) {
+      scheduleHistory(cachedData);
       return jsonNoStore({
         success: true,
         data: cachedData.records,
