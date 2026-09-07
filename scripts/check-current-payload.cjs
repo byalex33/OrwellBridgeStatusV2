@@ -9,7 +9,7 @@ const collection = { insertOne: async () => ({ insertedId: '1' }), find: () => {
 const dependencies = {
   'next/server': { NextResponse: { json: body => body }, after: fn => deferred.push(fn) },
   '@/lib/traffic': { getBridgeTrafficData: async () => observation },
-  '@/lib/cache': { cache: { getWithStale: key => ({ data: cache.get(key), isStale: false }), get: key => cache.get(key), set: (key, value) => cache.set(key, value), getOrFetch: async (key, fn) => { const value = cache.get(key) || await fn(); cache.set(key, value); return value; } } },
+  '@/lib/cache': { cache: { getWithStale: key => ({ data: cache.get(key), isStale: false }), get: key => cache.get(key), set: (key, value) => cache.set(key, value), getOrFetch: async (key, fn) => { const value = cache.has(key) ? cache.get(key) : await fn(); cache.set(key, value); return value; } } },
   '@/lib/records': { mapBridgeRecord: x => x },
   '@/lib/mongodb': { default: () => Promise.resolve({ db: () => ({ collection: () => collection }) }) },
 };

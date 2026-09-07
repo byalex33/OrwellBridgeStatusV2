@@ -15,6 +15,8 @@ const { cache } = mod.exports;
       assert.equal(calls, expected);
       now += 301000;
     }
+    assert.equal(await cache.getOrFetch('null', async () => null), null);
+    assert.equal(await cache.getOrFetch('null', () => { throw Error('must reuse null'); }), null);
     await assert.rejects(cache.getOrFetch('failure', () => { throw Error('offline'); }), /offline/);
     assert.equal(await cache.getOrFetch('failure', async () => 0), 0);
     assert.equal(await cache.getOrFetch('failure', () => { throw Error('must reuse zero'); }), 0);
