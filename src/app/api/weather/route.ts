@@ -29,9 +29,7 @@ export async function GET() {
       });
     }
 
-    const weatherData = await getWeatherData();
-
-    cache.set('weather-data', weatherData, 900);
+    const weatherData = await cache.getOrFetch('weather-data', getWeatherData, 900);
 
     return jsonNoStore({
       success: true,

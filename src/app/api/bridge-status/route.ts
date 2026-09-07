@@ -103,30 +103,6 @@ function makeCacheEntry(
   };
 }
 
-async function refreshBridgeData() {
-  try {
-    const trafficData = await getBridgeTrafficData();
-    const currentRecord = buildCurrentRecord(trafficData);
-
-    after(async () => {
-      try {
-        await saveCurrentRecord(currentRecord);
-      } catch (error) {
-        console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
-      }
-    });
-
-    const allRecords = [currentRecord];
-    cache.set('bridge-status', makeCacheEntry(allRecords, trafficData), 600, 300);
-
-    console.log('Background refresh completed');
-  } catch (error) {
-    console.error('Background refresh failed', {
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
-
 export async function GET() {
   try {
     const cacheResult = cache.getWithStale<BridgeCacheEntry>('bridge-status');
@@ -141,43 +117,25 @@ export async function GET() {
       });
     }
 
-    if (cacheResult.data && cacheResult.isStale) {
-      refreshBridgeData().catch((error) => {
-        console.error('Background bridge refresh failed', {
-          message: error instanceof Error ? error.message : 'Unknown error'
-        });
+    // ponytail: per-instance deduplication; use shared coordination if provider quotas require it.
+    const cacheEntry = await cache.getOrFetch('bridge-status', async () => {
+      const trafficData = await getBridgeTrafficData();
+      const currentRecord = buildCurrentRecord(trafficData);
+      after(async () => {
+        try {
+          await saveCurrentRecord(currentRecord);
+        } catch (error) {
+          console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
+        }
       });
-
-      return jsonNoStore({
-        success: true,
-        data: cacheResult.data.records,
-        cached: true,
-        stale: true,
-        timestamp: cacheResult.data.timestamp,
-        trafficData: cacheResult.data.trafficData,
-      });
-    }
-
-    const trafficData = await getBridgeTrafficData();
-    const currentRecord = buildCurrentRecord(trafficData);
-
-    after(async () => {
-      try {
-        await saveCurrentRecord(currentRecord);
-      } catch (error) {
-        console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
-      }
-    });
-
-    const allRecords = [currentRecord];
-    const cacheEntry = makeCacheEntry(allRecords, trafficData);
-    cache.set('bridge-status', cacheEntry, 600, 300);
+      return makeCacheEntry([currentRecord], trafficData);
+    }, 600, 300);
 
     return jsonNoStore({
       success: true,
-      data: allRecords,
+      data: cacheEntry.records,
       realTime: true,
-      timestamp: trafficData.timestamp,
+      timestamp: cacheEntry.timestamp,
       trafficData: cacheEntry.trafficData,
     });
   } catch (error) {
@@ -191,6 +149,7 @@ export async function GET() {
         success: true,
         data: cachedData.records,
         fallback: true,
+        stale: true,
         cached: true,
         timestamp: cachedData.timestamp,
         trafficData: cachedData.trafficData,
