@@ -16,7 +16,7 @@ type RecordData = {
 type Payload = { D2Payload?: { publicationTime?: string; situation?: Array<{ situationRecord?: Array<{ sitRoadOrCarriagewayOrLaneManagement?: RecordData }> }> } };
 
 export function parseClosures(data: Payload, now = Date.now()): DirectionalStatus {
-  const unknown: TrafficData = { status: 'UNKNOWN', details: 'National Highways: No confirmed restriction found; open status not established', averageSpeed: 0, description: 'National Highways' };
+  const unknown: TrafficData = { status: 'UNKNOWN', details: 'National Highways: No confirmed restriction found; open status not established', averageSpeed: null, description: 'National Highways' };
   const result: DirectionalStatus = { eastbound: { ...unknown }, westbound: { ...unknown } };
   const payload = data?.D2Payload;
   const age = now - Date.parse(payload?.publicationTime ?? '');
@@ -54,7 +54,7 @@ export function parseClosures(data: Payload, now = Date.now()): DirectionalStatu
         for (const direction of ['eastbound', 'westbound'] as const) {
           const applies = directions.some(value => value === 'bothWays' || value === 'allDirections' || value === (direction === 'eastbound' ? 'eastBound' : 'westBound'));
           if (applies && result[direction].status !== 'CLOSED') result[direction] = {
-            status, averageSpeed: 0, description: 'National Highways',
+            status, averageSpeed: null, description: 'National Highways',
             details: status === 'CLOSED' ? 'National Highways reports a carriageway closure' : 'National Highways reports a lane restriction',
           };
         }
