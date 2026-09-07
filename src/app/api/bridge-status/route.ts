@@ -63,6 +63,7 @@ function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTraf
     description: trafficData.overallStatus.details,
     direction: trafficData.directions.eastbound.status !== 'OPEN' && trafficData.directions.westbound.status === 'OPEN' ? 'eastbound'
       : trafficData.directions.westbound.status !== 'OPEN' && trafficData.directions.eastbound.status === 'OPEN' ? 'westbound' : 'both',
+    speedUnit: 'mph',
     averageSpeed: Math.round(
       (trafficData.directions.eastbound.averageSpeed + trafficData.directions.westbound.averageSpeed) / 2
     ),

@@ -58,18 +58,22 @@ export default function Home() {
   const [eventsLoading, setEventsLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let running = false;
+    async function request(path: string) {
+      const response = await fetch(path, {
+        cache: "no-store",
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+      });
+      const result = await response.json();
+      if (controller.signal.aborted) throw new Error("Request cancelled");
+      return { response, result };
+    }
     const fetchBridgeStatusHistory = async () => {
-      try {
-        const [bridgeResponse, weatherResponse, eventsResponse] = await Promise.all([
-          fetch("/api/bridge-status", { cache: "no-store" }),
-          fetch("/api/weather", { cache: "no-store" }),
-          fetch("/api/events", { cache: "no-store" }),
-        ]);
-
-        const bridgeResult = (await bridgeResponse.json().catch(() => null)) as BridgeStatusResponse | null;
-        const weatherResult = (await weatherResponse.json().catch(() => null)) as WeatherResponse | null;
-        const eventsResult = await eventsResponse.json().catch(() => null);
-
+      if (running) return;
+      running = true;
+      await Promise.allSettled([
+        request("/api/bridge-status").then(({ response: bridgeResponse, result: bridgeResult }: { response: Response; result: BridgeStatusResponse }) => {
         if (bridgeResponse.ok && bridgeResult?.success) {
           const apiTimestamp = bridgeResult.timestamp || bridgeResult.data[0]?.timestamp;
           const lastUpdated = apiTimestamp
@@ -117,33 +121,27 @@ export default function Home() {
           }));
         }
 
-        if (weatherResult?.data) {
-          setWeather(weatherResult.data);
-        }
-
-        if (eventsResponse.ok && Array.isArray(eventsResult)) {
-          setPastEvents(eventsResult);
-        } else {
-          setPastEvents([]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch dashboard data", {
-          message: error instanceof Error ? error.message : "Unknown error",
-        });
-        setBridgeStatus((prev) => ({
-          ...prev,
-          lastUpdated: "Unavailable",
-          isRealTime: false,
-          freshness: "error",
-        }));
-      } finally {
-        setEventsLoading(false);
-      }
+        }).catch(() => {
+          if (!controller.signal.aborted) setBridgeStatus(prev => ({ ...prev, lastUpdated: "Unavailable", isRealTime: false, freshness: "error" }));
+        }),
+        request("/api/weather").then(({ result: weatherResult }: { result: WeatherResponse }) => {
+          if (weatherResult?.data) setWeather(weatherResult.data);
+        }),
+        request("/api/events").then(({ response, result }) => {
+          if (response.ok && Array.isArray(result)) setPastEvents(result);
+          else setPastEvents([]);
+        }).catch(() => {
+          if (!controller.signal.aborted) setPastEvents([]);
+        }).finally(() => {
+          if (!controller.signal.aborted) setEventsLoading(false);
+        }),
+      ]);
+      running = false;
     };
 
-    fetchBridgeStatusHistory();
-    const interval = setInterval(fetchBridgeStatusHistory, 1800000);
-    return () => clearInterval(interval);
+    void fetchBridgeStatusHistory();
+    const interval = setInterval(() => void fetchBridgeStatusHistory(), 1800000);
+    return () => { controller.abort(); clearInterval(interval); };
   }, []);
 
   const getStatusColor = (status: LaneStatus) => {

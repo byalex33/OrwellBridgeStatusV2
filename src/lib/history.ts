@@ -20,7 +20,7 @@ export async function saveBridgeTransition(collection: Collection<DbBridgeRecord
   try {
     await collection.insertOne({
       _id, status: current.status, timestamp: new Date(current.timestamp), description: current.description,
-      direction: current.direction, averageSpeed: current.averageSpeed, eastboundStatus, westboundStatus,
+      direction: current.direction, averageSpeed: current.averageSpeed, speedUnit: current.speedUnit, eastboundStatus, westboundStatus,
     });
   } catch (error) {
     if (!(error && typeof error === 'object' && 'code' in error && error.code === 11000)) throw error;

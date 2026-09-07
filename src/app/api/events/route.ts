@@ -48,3 +48,4 @@ export async function GET() {
     return jsonNoStore({ message: 'Events unavailable' }, { status: 503 });
   }
 }
+

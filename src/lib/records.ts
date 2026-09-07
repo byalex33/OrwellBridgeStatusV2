@@ -9,6 +9,7 @@ export type DbBridgeRecord = {
   description?: string;
   direction?: string;
   averageSpeed?: number;
+  speedUnit?: 'mph';
   __v?: number;
 };
 
@@ -63,6 +64,7 @@ export function mapBridgeRecord(record: DbBridgeRecord): BridgeStatusRecord | nu
     description: record.description || 'No description available',
     direction: normalizeDirection(record.direction),
     averageSpeed: record.averageSpeed || 0,
+    speedUnit: record.speedUnit === 'mph' ? 'mph' : undefined,
     __v: record.__v || 0,
   };
 }

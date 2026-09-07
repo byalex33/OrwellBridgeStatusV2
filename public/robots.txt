@@ -3,7 +3,7 @@ Allow: /
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://orwellbridgestatus.vercel.app/sitemap.xml
+Sitemap: https://www.orwellbridgestatus.com/sitemap.xml
 
 # Crawl-delay for respectful crawling
 Crawl-delay: 1
