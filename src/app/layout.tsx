@@ -83,22 +83,21 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
-    apple: "/logo.png",
+    apple: "/icon-192.png",
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-status-bar-style": "default",
     "apple-mobile-web-app-title": "Orwell Bridge",
     "mobile-web-app-capable": "yes",
     "msapplication-TileColor": "#000000",
-    "theme-color": "#000000",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#000000",
+  themeColor: "#182b46",
 };
 
 export default async function RootLayout({

@@ -1,5 +1,7 @@
 "use client";
 
+import InstallApp from '@/components/InstallApp';
+
 import {
   Thermometer, Wind, ArrowUp, Clock, AlertTriangle, Gauge, Heart, Coffee,
   Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Loader2
@@ -449,6 +451,7 @@ export default function Home() {
             </div>
           )}
         </div>
+        <InstallApp />
       </main>
 
       <footer className="border-t border-border/50 px-6 py-8 mt-8">

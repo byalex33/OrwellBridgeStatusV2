@@ -10,6 +10,7 @@ export function middleware(request: NextRequest) {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "connect-src 'self' https://vitals.vercel-insights.com",
+    "worker-src 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
