@@ -4,15 +4,15 @@ export default function StructuredData() {
     "@graph": [
       {
         "@type": "WebSite",
-        "@id": "https://orwellbridgestatus.vercel.app/#website",
-        "url": "https://orwellbridgestatus.vercel.app/",
+        "@id": "https://www.orwellbridgestatus.com/#website",
+        "url": "https://www.orwellbridgestatus.com/",
         "name": "Orwell Bridge Status",
         "description": "Real-time monitoring of Orwell Bridge (A14) traffic conditions, weather alerts, lane closures and delays"
       },
       {
         "@type": "WebApplication",
-        "@id": "https://orwellbridgestatus.vercel.app/#webapp",
-        "url": "https://orwellbridgestatus.vercel.app/",
+        "@id": "https://www.orwellbridgestatus.com/#webapp",
+        "url": "https://www.orwellbridgestatus.com/",
         "name": "Orwell Bridge Status Monitor",
         "description": "Live traffic monitoring system for the Orwell Bridge on the A14 in Suffolk",
         "applicationCategory": "TransportationApplication",
@@ -32,7 +32,7 @@ export default function StructuredData() {
       },
       {
         "@type": "Place",
-        "@id": "https://orwellbridgestatus.vercel.app/#place",
+        "@id": "https://www.orwellbridgestatus.com/#place",
         "name": "Orwell Bridge",
         "description": "Cable-stayed bridge carrying the A14 over the River Orwell in Suffolk, England",
         "geo": {
@@ -53,12 +53,12 @@ export default function StructuredData() {
       },
       {
         "@type": "Organization",
-        "@id": "https://orwellbridgestatus.vercel.app/#organization",
+        "@id": "https://www.orwellbridgestatus.com/#organization",
         "name": "Orwell Bridge Status",
-        "url": "https://orwellbridgestatus.vercel.app/",
+        "url": "https://www.orwellbridgestatus.com/",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://orwellbridgestatus.vercel.app/logo.svg"
+          "url": "https://www.orwellbridgestatus.com/logo.svg"
         },
         "sameAs": [
           "https://github.com/developedbyalex/OrwellBridgeStatusV2"
@@ -70,11 +70,11 @@ export default function StructuredData() {
       },
       {
         "@type": "Service",
-        "@id": "https://orwellbridgestatus.vercel.app/#service",
+        "@id": "https://www.orwellbridgestatus.com/#service",
         "name": "Bridge Traffic Monitoring",
         "description": "Real-time monitoring service for Orwell Bridge traffic conditions",
         "provider": {
-          "@id": "https://orwellbridgestatus.vercel.app/#organization"
+          "@id": "https://www.orwellbridgestatus.com/#organization"
         },
         "areaServed": {
           "@type": "Place",
