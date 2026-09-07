@@ -42,7 +42,7 @@ export async function GET() {
 
       return records.map(mapBridgeRecord).filter((record): record is BridgeStatusRecord => record !== null);
     }, 600);
-    return jsonNoStore(events.length ? events : { message: 'No closures or delays in the last 24 hours' });
+    return jsonNoStore(events);
   } catch (error) {
     console.error('Events API error', { message: error instanceof Error ? error.message : 'Unknown error' });
     return jsonNoStore({ message: 'Events unavailable' }, { status: 503 });
