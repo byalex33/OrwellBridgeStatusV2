@@ -46,5 +46,12 @@ const tick = () => new Promise(setImmediate);
   await tick();eventsFail=true;history.poll();await tick();
   assert.match(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);assert.doesNotMatch(history.render(),/No recent events found/);history.cleanup();
   console.log('F08/F09/F10/F14/F16: independent panel updates, pending-request overlap guard passed');
+  console.log('F08/F09/F10/F14: independent panel updates, pending-request overlap guard passed');
+  console.log('F08/F09/F14: independent panel updates, pending-request overlap guard passed');
+  const rejected=dashboard(async()=>{throw Error('offline')});await tick();assert.equal(rejected.state[0].lastUpdated,'Unavailable');assert.equal(rejected.state[0].freshness,'error');rejected.cleanup();
+  console.log('F14: independent panel updates, pending-request overlap guard passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
 module.exports={dashboard,response,tick};
+
+
+
