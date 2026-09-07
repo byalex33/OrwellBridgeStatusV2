@@ -14,6 +14,7 @@ interface BridgeStatus {
   eastbound: LaneStatus;
   westbound: LaneStatus;
   lastUpdated: string;
+  observedAt?: string;
   isRealTime: boolean;
   freshness: DataFreshness;
 }
@@ -56,6 +57,7 @@ export default function Home() {
   const [pastEvents, setPastEvents] = useState<BridgeStatusRecord[]>([]);
   const [trafficData, setTrafficData] = useState<TrafficDirections | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -77,7 +79,7 @@ export default function Home() {
         if (bridgeResponse.ok && bridgeResult?.success) {
           const apiTimestamp = bridgeResult.timestamp || bridgeResult.data[0]?.timestamp;
           const lastUpdated = apiTimestamp
-            ? new Date(apiTimestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+            ? new Date(apiTimestamp).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })
             : "Unknown";
           const freshness: DataFreshness = bridgeResult.fallback
             ? "fallback"
@@ -89,13 +91,18 @@ export default function Home() {
             ? "live"
             : "cached";
 
-          if (bridgeResult.trafficData) {
+          const age = apiTimestamp ? Date.now() - new Date(apiTimestamp).getTime() : NaN;
+          if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 600000 || age < -60000 || bridgeResult.stale)) {
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: "stale" }));
+            setTrafficData(null);
+          } else if (bridgeResult.trafficData) {
             const { directions } = bridgeResult.trafficData;
             setBridgeStatus((prev) => ({
               ...prev,
               eastbound: directions.eastbound.status.toLowerCase() as LaneStatus,
               westbound: directions.westbound.status.toLowerCase() as LaneStatus,
               lastUpdated,
+              observedAt: apiTimestamp,
               isRealTime: freshness === "live",
               freshness,
             }));
@@ -115,14 +122,20 @@ export default function Home() {
         } else {
           setBridgeStatus((prev) => ({
             ...prev,
+            eastbound: "unknown",
+            westbound: "unknown",
             lastUpdated: "Unavailable",
             isRealTime: false,
             freshness: "error",
           }));
+          setTrafficData(null);
         }
 
         }).catch(() => {
-          if (!controller.signal.aborted) setBridgeStatus(prev => ({ ...prev, lastUpdated: "Unavailable", isRealTime: false, freshness: "error" }));
+          if (!controller.signal.aborted) {
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", isRealTime: false, freshness: "error" }));
+            setTrafficData(null);
+          }
         }),
         request("/api/weather").then(({ result: weatherResult }: { result: WeatherResponse }) => {
           if (weatherResult?.data) setWeather(weatherResult.data);
@@ -140,8 +153,22 @@ export default function Home() {
     };
 
     void fetchBridgeStatusHistory();
-    const interval = setInterval(() => void fetchBridgeStatusHistory(), 1800000);
-    return () => { controller.abort(); clearInterval(interval); };
+    const interval = setInterval(() => void fetchBridgeStatusHistory(), 60000);
+    const onVisible = () => { if (document.visibilityState === "visible") void fetchBridgeStatusHistory(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => { controller.abort(); clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); window.removeEventListener("focus", onVisible); };
+  }, [refresh]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBridgeStatus(prev => {
+        const age = prev.observedAt ? Date.now() - new Date(prev.observedAt).getTime() : NaN;
+        return (prev.freshness === "live" || prev.freshness === "cached") && (!Number.isFinite(age) || age > 600000 || age < -60000)
+          ? { ...prev, eastbound: "unknown", westbound: "unknown", isRealTime: false, freshness: "stale" } : prev;
+      });
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const getStatusColor = (status: LaneStatus) => {
@@ -248,6 +275,7 @@ export default function Home() {
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
 
+        <button type="button" className="text-sm underline" onClick={() => setRefresh(value => value + 1)}>Refresh status</button>
         {/* Staleness / error warning */}
         {isWarning && (
           <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200">
@@ -268,8 +296,8 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(
               [
-                { direction: "Eastbound", route: "Ipswich → Felixstowe", status: bridgeStatus.eastbound, traffic: trafficData?.eastbound },
-                { direction: "Westbound", route: "Felixstowe → Ipswich", status: bridgeStatus.westbound, traffic: trafficData?.westbound },
+                { direction: "Eastbound", route: "Ipswich → Felixstowe", status: bridgeStatus.eastbound, traffic: isWarning ? undefined : trafficData?.eastbound },
+                { direction: "Westbound", route: "Felixstowe → Ipswich", status: bridgeStatus.westbound, traffic: isWarning ? undefined : trafficData?.westbound },
               ] as const
             ).map(({ direction, route, status, traffic }) => (
               <div key={direction} className={`rounded-2xl border p-6 ${getStatusBorder(status)}`}>
