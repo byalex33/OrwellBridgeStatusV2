@@ -109,8 +109,10 @@ function makeCacheEntry(
 }
 
 export async function GET() {
+  let retainedEntry: BridgeCacheEntry | null = null;
   try {
     const cacheResult = cache.getWithStale<BridgeCacheEntry>('bridge-status');
+    retainedEntry = cacheResult.data;
 
     if (cacheResult.data && !cacheResult.isStale) {
       return jsonNoStore({
@@ -148,7 +150,7 @@ export async function GET() {
       message: error instanceof Error ? error.message : 'Unknown error'
     });
 
-    const cachedData = cache.get<BridgeCacheEntry>('bridge-status');
+    const cachedData = cache.get<BridgeCacheEntry>('bridge-status') ?? retainedEntry;
     if (cachedData) {
       return jsonNoStore({
         success: true,
