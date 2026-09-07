@@ -14,6 +14,7 @@ interface BridgeStatus {
   eastbound: LaneStatus;
   westbound: LaneStatus;
   lastUpdated: string;
+  observedAt?: string;
   isRealTime: boolean;
   freshness: DataFreshness;
 }
@@ -45,17 +46,13 @@ export default function Home() {
     freshness: "loading",
   });
 
-  const [weather, setWeather] = useState<WeatherData>({
-    temperature: 0,
-    windSpeed: 0,
-    windDirection: 0,
-    description: "Loading...",
-    icon: "",
-  });
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   const [pastEvents, setPastEvents] = useState<BridgeStatusRecord[]>([]);
   const [trafficData, setTrafficData] = useState<TrafficDirections | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -72,12 +69,13 @@ export default function Home() {
     const fetchBridgeStatusHistory = async () => {
       if (running) return;
       running = true;
+      setWeatherLoading(true);
       await Promise.allSettled([
         request("/api/bridge-status").then(({ response: bridgeResponse, result: bridgeResult }: { response: Response; result: BridgeStatusResponse }) => {
         if (bridgeResponse.ok && bridgeResult?.success) {
           const apiTimestamp = bridgeResult.timestamp || bridgeResult.data[0]?.timestamp;
           const lastUpdated = apiTimestamp
-            ? new Date(apiTimestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+            ? new Date(apiTimestamp).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })
             : "Unknown";
           const freshness: DataFreshness = bridgeResult.fallback
             ? "fallback"
@@ -89,43 +87,53 @@ export default function Home() {
             ? "live"
             : "cached";
 
-          if (bridgeResult.trafficData) {
+          const age = apiTimestamp ? Date.now() - new Date(apiTimestamp).getTime() : NaN;
+          if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 600000 || age < -60000 || bridgeResult.stale || bridgeResult.fallback)) {
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: bridgeResult.fallback ? "fallback" : "stale" }));
+            setTrafficData(null);
+          } else if (bridgeResult.trafficData) {
             const { directions } = bridgeResult.trafficData;
             setBridgeStatus((prev) => ({
               ...prev,
               eastbound: directions.eastbound.status.toLowerCase() as LaneStatus,
               westbound: directions.westbound.status.toLowerCase() as LaneStatus,
               lastUpdated,
+              observedAt: apiTimestamp,
               isRealTime: freshness === "live",
               freshness,
             }));
             setTrafficData(directions);
-          } else if (bridgeResult.data.length > 0) {
-            const latest = bridgeResult.data[0];
-            const currentStatus = latest.status.toLowerCase() as LaneStatus;
-            setBridgeStatus((prev) => ({
-              ...prev,
-              eastbound: currentStatus,
-              westbound: currentStatus,
-              lastUpdated,
-              isRealTime: false,
-              freshness,
-            }));
+          } else {
+            // A historical event cannot establish current directional observations.
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: "fallback" }));
+            setTrafficData(null);
           }
         } else {
           setBridgeStatus((prev) => ({
             ...prev,
+            eastbound: "unknown",
+            westbound: "unknown",
             lastUpdated: "Unavailable",
             isRealTime: false,
             freshness: "error",
           }));
+          setTrafficData(null);
         }
 
         }).catch(() => {
-          if (!controller.signal.aborted) setBridgeStatus(prev => ({ ...prev, lastUpdated: "Unavailable", isRealTime: false, freshness: "error" }));
+          if (!controller.signal.aborted) {
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated: "Unavailable", isRealTime: false, freshness: "error" }));
+            setTrafficData(null);
+          }
         }),
-        request("/api/weather").then(({ result: weatherResult }: { result: WeatherResponse }) => {
-          if (weatherResult?.data) setWeather(weatherResult.data);
+        request("/api/weather").then(({ response, result: weatherResult }: { response: Response; result: WeatherResponse }) => {
+          const data = weatherResult.data;
+          if (!response.ok || !weatherResult.success || !data || ![data.temperature, data.windSpeed, data.windDirection].every(Number.isFinite) || data.windSpeed < 0 || data.windDirection < 0 || data.windDirection > 360 || typeof data.description !== "string") throw new Error("Weather unavailable");
+          setWeather(data);
+        }).catch(() => {
+          if (!controller.signal.aborted) setWeather(null);
+        }).finally(() => {
+          if (!controller.signal.aborted) setWeatherLoading(false);
         }),
         request("/api/events").then(({ response, result }) => {
           if (response.ok && Array.isArray(result)) setPastEvents(result);
@@ -140,8 +148,22 @@ export default function Home() {
     };
 
     void fetchBridgeStatusHistory();
-    const interval = setInterval(() => void fetchBridgeStatusHistory(), 1800000);
-    return () => { controller.abort(); clearInterval(interval); };
+    const interval = setInterval(() => void fetchBridgeStatusHistory(), 60000);
+    const onVisible = () => { if (document.visibilityState === "visible") void fetchBridgeStatusHistory(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => { controller.abort(); clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); window.removeEventListener("focus", onVisible); };
+  }, [refresh]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBridgeStatus(prev => {
+        const age = prev.observedAt ? Date.now() - new Date(prev.observedAt).getTime() : NaN;
+        return (prev.freshness === "live" || prev.freshness === "cached") && (!Number.isFinite(age) || age > 600000 || age < -60000)
+          ? { ...prev, eastbound: "unknown", westbound: "unknown", isRealTime: false, freshness: "stale" } : prev;
+      });
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const getStatusColor = (status: LaneStatus) => {
@@ -248,6 +270,7 @@ export default function Home() {
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
 
+        <button type="button" className="text-sm underline" onClick={() => setRefresh(value => value + 1)}>Refresh status</button>
         {/* Staleness / error warning */}
         {isWarning && (
           <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200">
@@ -268,8 +291,8 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(
               [
-                { direction: "Eastbound", route: "Ipswich → Felixstowe", status: bridgeStatus.eastbound, traffic: trafficData?.eastbound },
-                { direction: "Westbound", route: "Felixstowe → Ipswich", status: bridgeStatus.westbound, traffic: trafficData?.westbound },
+                { direction: "Eastbound", route: "Ipswich → Felixstowe", status: bridgeStatus.eastbound, traffic: isWarning ? undefined : trafficData?.eastbound },
+                { direction: "Westbound", route: "Felixstowe → Ipswich", status: bridgeStatus.westbound, traffic: isWarning ? undefined : trafficData?.westbound },
               ] as const
             ).map(({ direction, route, status, traffic }) => (
               <div key={direction} className={`rounded-2xl border p-6 ${getStatusBorder(status)}`}>
@@ -330,7 +353,7 @@ export default function Home() {
                 <span className="text-xs">Temperature</span>
               </div>
               <div>
-                <span className="text-3xl font-mono font-semibold">{weather.temperature}</span>
+                <span className="text-3xl font-mono font-semibold">{weather?.temperature ?? "—"}</span>
                 <span className="text-lg text-muted-foreground ml-0.5">°C</span>
               </div>
             </div>
@@ -340,7 +363,7 @@ export default function Home() {
                 <span className="text-xs">Wind Speed</span>
               </div>
               <div>
-                <span className="text-3xl font-mono font-semibold">{weather.windSpeed}</span>
+                <span className="text-3xl font-mono font-semibold">{weather?.windSpeed ?? "—"}</span>
                 <span className="text-base text-muted-foreground ml-1">mph</span>
               </div>
             </div>
@@ -348,18 +371,18 @@ export default function Home() {
               <div className="flex items-center gap-1.5 text-muted-foreground mb-3">
                 <ArrowUp
                   className="h-3.5 w-3.5 transition-transform"
-                  style={{ transform: `rotate(${weather.windDirection}deg)` }}
+                  style={{ transform: `rotate(${weather?.windDirection ?? 0}deg)` }}
                 />
                 <span className="text-xs">Direction</span>
               </div>
-              <span className="text-3xl font-mono font-semibold">{getWindDirection(weather.windDirection)}</span>
+              <span className="text-3xl font-mono font-semibold">{weather ? getWindDirection(weather.windDirection) : "—"}</span>
             </div>
           </div>
           <div className="mt-2.5 flex items-center gap-2 text-sm text-muted-foreground px-1">
-            <WeatherIcon description={weather.description} className="h-4 w-4" />
-            <span>{weather.description}</span>
+            <WeatherIcon description={weather?.description ?? "Unknown"} className="h-4 w-4" />
+            <span>{weatherLoading ? (weather ? "Updating weather…" : "Loading weather…") : weather?.description ?? "Weather unavailable"}</span>
           </div>
-          {weather.windSpeed > 30 && (
+          {weather && weather.windSpeed > 30 && (
             <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200 mt-3">
               <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
               <p className="text-sm">High wind warning — bridge may be restricted for high-sided vehicles</p>
@@ -437,3 +460,5 @@ export default function Home() {
     </div>
   );
 }
+
+

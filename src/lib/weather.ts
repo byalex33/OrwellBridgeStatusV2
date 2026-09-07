@@ -84,14 +84,14 @@ export async function getWeatherData(): Promise<WeatherData> {
 
   const current = response.data.current;
 
-  if (!current) {
+  if (!current || ![current.temperature_2m, current.wind_speed_10m, current.wind_direction_10m, current.weather_code].every(Number.isFinite) || current.wind_speed_10m < 0 || current.wind_direction_10m < 0 || current.wind_direction_10m > 360) {
     throw new Error('Open-Meteo response did not include current weather data');
   }
 
   return {
     temperature: Math.round(current.temperature_2m),
     windSpeed: Math.round(current.wind_speed_10m),
-    windDirection: current.wind_direction_10m || 0,
+    windDirection: current.wind_direction_10m,
     description: getWeatherDescription(current.weather_code),
     icon: getWeatherIcon(current.weather_code)
   };
