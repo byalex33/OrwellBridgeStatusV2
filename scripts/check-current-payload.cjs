@@ -31,7 +31,10 @@ new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/app/a
     observation.directions.westbound.status = west;
     assert.equal((await mod.exports.GET()).data[0].direction, expected);
   }
+  cache.clear();
+  observation.directions.westbound.averageSpeed = null;
+  assert.equal((await mod.exports.GET()).data[0].averageSpeed, null);
   assert.equal(reads, 0);
-  assert.equal(deferred.length, 4, 'history persistence runs after the response');
+  assert.equal(deferred.length, 5, 'history persistence runs after the response');
   console.log('Current payload checks passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });
