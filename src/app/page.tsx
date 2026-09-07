@@ -230,7 +230,7 @@ export default function Home() {
   const eventDescription = (record: BridgeStatusRecord) => {
     const direction = record.direction === "eastbound" || record.direction === "westbound"
       ? record.direction : record.direction === "both" ? "in both directions" : "in at least one direction";
-    return record.description.replace(/in at least one direction/g, direction);
+    return record.description.replace(/^(Bridge (?:is )?(?:closed|experiencing delays)) in at least one direction$/, `$1 ${direction}`);
   };
 
   const getEventDot = (status: string) => {
