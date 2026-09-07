@@ -67,7 +67,9 @@ export async function getHereTrafficData(): Promise<HereDirectionalStatus> {
   for (const direction of ['eastbound', 'westbound'] as const) {
     const flows = response.data.results.filter(flow => {
       const links = flow?.location?.shape?.links;
-      return Array.isArray(links) && links.some(link => Array.isArray(link?.points) && crossingDirection(link.points) === direction);
+      if (!Array.isArray(links)) return false;
+      const matched = new Set(links.map(link => Array.isArray(link?.points) ? crossingDirection(link.points) : null).filter(Boolean));
+      return matched.size === 1 && matched.has(direction);
     });
     result[direction] = { ...analyzeHereFlow(flows), description: `A14 ${direction} (HERE)` };
   }
