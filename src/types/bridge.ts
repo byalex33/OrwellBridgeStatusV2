@@ -50,8 +50,9 @@ export interface WeatherResponse {
     windDirection: number;
     description: string;
     icon: string;
-  };
+  } | null;
   realTime?: boolean;
   cached?: boolean;
   fallback?: boolean;
 }
+
