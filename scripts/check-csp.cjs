@@ -1,4 +1,4 @@
-// Run after npm run build. Starts an isolated production server with no provider keys.
+// Run after npm run build. Starts an isolated production server.
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const net = require('node:net');
@@ -16,24 +16,24 @@ const net = require('node:net');
       catch { await new Promise(resolve => setTimeout(resolve, 100)); }
     }
     assert.ok(response?.ok, 'production server must start');
-    const policy = response.headers.get('content-security-policy');
-    const scripts = policy.split(';').find(value => value.trim().startsWith('script-src '));
-    assert.ok(!scripts.includes('unsafe-inline') && !scripts.includes('unsafe-eval'));
-    const nonce = scripts.match(/'nonce-([^']+)'/)[1];
-    const html = await response.text();
-    const tags = [...html.matchAll(/<script\b[^>]*>/g)].map(match => match[0]);
-    assert.ok(tags.length > 1);
-    for (const tag of tags) assert.ok(tag.includes(`nonce="${nonce}"`), tag);
-    const second = await fetch(url, { headers: { 'x-nonce': 'attacker-value' } });
-    const nextPolicy = second.headers.get('content-security-policy');
-    assert.ok(second.ok);
-    const nextNonce = nextPolicy.match(/'nonce-([^']+)'/)[1];
-    const nextHtml = await second.text();
-    const nextTags = [...nextHtml.matchAll(/<script\b[^>]*>/g)].map(match => match[0]);
-    assert.ok(nextTags.length > 1);
-    for (const tag of nextTags) assert.ok(tag.includes('nonce="' + nextNonce + '"'), tag);
-    assert.notEqual(nextNonce, nonce);
-    assert.notEqual(nextNonce, 'attacker-value');
-    console.log('Production CSP: every script nonced, unique per request, no inline/eval bypass.');
+    const nonces = new Set();
+    for (const path of ['/', '/', '/missing.png', '/missing.svg', '/apiary', '/api/not-a-route']) {
+      const result = await fetch(url + path, { headers: { 'x-nonce': 'attacker-value' } });
+      assert.equal(result.status, path === '/' ? 200 : 404);
+      assert.match(result.headers.get('content-type'), /text\/html/);
+      assert.match(result.headers.get('cache-control'), /no-store|private/);
+      const policy = result.headers.get('content-security-policy');
+      const scripts = policy.split(';').find(value => value.trim().startsWith('script-src '));
+      assert.ok(!scripts.includes('unsafe-inline') && !scripts.includes('unsafe-eval'));
+      const nonce = scripts.match(/'nonce-([^']+)'/)[1];
+      assert.ok(!nonces.has(nonce));
+      assert.notEqual(nonce, 'attacker-value');
+      nonces.add(nonce);
+      const html = await result.text();
+      const tags = [...html.matchAll(/<script\b[^>]*>/g)].map(match => match[0]);
+      assert.ok(tags.length > 1);
+      for (const tag of tags) assert.ok(tag.includes(`nonce="${nonce}"`), path + ': ' + tag);
+    }
+    console.log('Production CSP: unique matching script nonces on pages and HTML 404s, no shared HTML caching or inline/eval bypass.');
   } finally { server.kill(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
