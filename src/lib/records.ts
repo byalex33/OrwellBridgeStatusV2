@@ -6,7 +6,7 @@ export type DbBridgeRecord = {
   timestamp?: Date | string;
   description?: string;
   direction?: string;
-  averageSpeed?: number;
+  averageSpeed?: number | null;
   speedUnit?: 'mph';
   __v?: number;
 };
@@ -61,7 +61,7 @@ export function mapBridgeRecord(record: DbBridgeRecord): BridgeStatusRecord | nu
     timestamp: timestamp,
     description: record.description || 'No description available',
     direction: normalizeDirection(record.direction),
-    averageSpeed: record.averageSpeed || 0,
+    averageSpeed: record.speedUnit === 'mph' ? record.averageSpeed ?? null : null,
     speedUnit: record.speedUnit === 'mph' ? 'mph' : undefined,
     __v: record.__v || 0,
   };

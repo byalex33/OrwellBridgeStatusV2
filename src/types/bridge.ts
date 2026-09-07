@@ -4,7 +4,7 @@ export interface BridgeStatusRecord {
   timestamp: string;
   description: string;
   direction: 'both' | 'north' | 'south' | 'eastbound' | 'westbound';
-  averageSpeed: number;
+  averageSpeed: number | null;
   /** Missing on legacy records whose measurement unit is unknown. */
   speedUnit?: 'mph';
   __v: number;
@@ -13,7 +13,7 @@ export interface BridgeStatusRecord {
 export interface DirectionalTrafficData {
   status: 'OPEN' | 'DELAYED' | 'CLOSED' | 'UNKNOWN';
   details: string;
-  averageSpeed: number;
+  averageSpeed: number | null;
   description: string;
 }
 
