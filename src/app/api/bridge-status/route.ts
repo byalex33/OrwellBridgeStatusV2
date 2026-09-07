@@ -3,6 +3,7 @@ import { BridgeStatusRecord } from '@/types/bridge';
 import { getBridgeTrafficData } from '@/lib/traffic';
 import type { DirectionalStatus, OverallStatus } from '@/lib/traffic';
 import { mapBridgeRecord, type DbBridgeRecord } from '@/lib/records';
+import { saveBridgeTransition } from '@/lib/history';
 import { cache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
@@ -60,27 +61,13 @@ function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTraf
     status: trafficData.overallStatus.status,
     timestamp: trafficData.timestamp.toISOString(),
     description: trafficData.overallStatus.details,
-    direction: 'both',
+    direction: trafficData.directions.eastbound.status !== 'OPEN' && trafficData.directions.westbound.status === 'OPEN' ? 'eastbound'
+      : trafficData.directions.westbound.status !== 'OPEN' && trafficData.directions.eastbound.status === 'OPEN' ? 'westbound' : 'both',
     averageSpeed: Math.round(
       (trafficData.directions.eastbound.averageSpeed + trafficData.directions.westbound.averageSpeed) / 2
     ),
     __v: 0,
   };
-}
-
-async function saveCurrentRecord(currentRecord: BridgeStatusRecord): Promise<void> {
-  const collection = await getBridgeCollection();
-
-  console.log('Saving current status to MongoDB:', currentRecord.status);
-  const insertResult = await collection.insertOne({
-    status: currentRecord.status,
-    timestamp: new Date(currentRecord.timestamp),
-    description: currentRecord.description,
-    direction: currentRecord.direction,
-    averageSpeed: currentRecord.averageSpeed,
-  });
-  console.log('MongoDB insert result:', insertResult.insertedId);
-
 }
 
 async function getDatabaseFallbackRecords(): Promise<BridgeStatusRecord[]> {
@@ -126,7 +113,7 @@ export async function GET() {
       const currentRecord = buildCurrentRecord(trafficData);
       after(async () => {
         try {
-          await saveCurrentRecord(currentRecord);
+          await saveBridgeTransition(await getBridgeCollection(), currentRecord, trafficData.directions);
         } catch (error) {
           console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
         }
