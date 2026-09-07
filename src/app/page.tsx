@@ -57,6 +57,7 @@ export default function Home() {
   const [refresh, setRefresh] = useState(0);
   const [eventsError, setEventsError] = useState(false);
   const [eventsUpdatedAt, setEventsUpdatedAt] = useState<string | null>(null);
+  const [weatherError, setWeatherError] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -134,8 +135,9 @@ export default function Home() {
           const data = weatherResult.data;
           if (!response.ok || !weatherResult.success || !data || ![data.temperature, data.windSpeed, data.windDirection].every(Number.isFinite) || data.windSpeed < 0 || data.windDirection < 0 || data.windDirection > 360 || typeof data.description !== "string") throw new Error("Weather unavailable");
           setWeather(data);
+          setWeatherError(false);
         }).catch(() => {
-          if (!controller.signal.aborted) setWeather(null);
+          if (!controller.signal.aborted) { setWeather(null); setWeatherError(true); }
         }).finally(() => {
           if (!controller.signal.aborted) setWeatherLoading(false);
         }),
@@ -251,6 +253,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{bridgeStatus.freshness === "loading" ? "Checking bridge status." : `Eastbound ${getStatusText(bridgeStatus.eastbound)}. Westbound ${getStatusText(bridgeStatus.westbound)}.${isWarning ? " Current traffic data is not confirmed." : ""}`}{weatherError ? " Weather unavailable." : ""}{eventsError ? " History unavailable." : ""}</p>
 
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-4">
