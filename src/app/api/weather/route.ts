@@ -31,7 +31,7 @@ export async function GET() {
 
     const weatherData = await getWeatherData();
 
-    cache.set('weather-data', weatherData, 900);
+    cache.set('weather-data', weatherData, Math.min(900, Math.max(0, (Date.parse(weatherData.timestamp) + 1800000 - Date.now()) / 1000)));
 
     return jsonNoStore({
       success: true,
