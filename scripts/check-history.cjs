@@ -14,7 +14,23 @@ const lock = { updateOne: async (_filter, update, options) => {
   session.locked = true;
 } };
 const collection = {
-  aggregate: (_pipeline, { session }) => { assert.ok(session.locked, 'lock must precede latest-state read'); return { toArray: async () => records.slice(-1) }; },
+  aggregate: (pipeline, { session }) => {
+    assert.ok(session.locked, 'lock must precede latest-state read');
+    let result = records.slice();
+    for (const stage of pipeline) {
+      if (stage.$set) result = result.map(record => ({ ...record, timestamp: new Date(record.timestamp) }));
+      if (stage.$match) result = result.filter(record => Number.isFinite(record.timestamp.getTime()));
+      if (stage.$sort) result.sort((a,b) => {
+        for (const [field, direction] of Object.entries(stage.$sort)) {
+          const order = a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0;
+          if (order) return order * direction;
+        }
+        return 0;
+      });
+      if (stage.$limit) result = result.slice(0, stage.$limit);
+    }
+    return { toArray: async () => result };
+  },
   insertOne: async (record, { session }) => { assert.ok(session.locked); if (failWrite) throw Error('offline'); records.push(record); },
 };
 const client = {
