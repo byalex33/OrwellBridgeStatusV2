@@ -46,6 +46,9 @@ const tick = () => new Promise(setImmediate);
   let eventsFail=false, historyRequests=0;
   const history=dashboard(async path=>{if(path.includes('events'))historyRequests++;return response(path.includes('events')?(eventsFail?{message:'unavailable'}:[{_id:'fixture',status:'CLOSED',description:'Recorded closure',direction:'eastbound',timestamp:new Date().toISOString()}]):{},!eventsFail);});
   await tick();eventsFail=true;history.poll();await tick();
+  for (const [direction, expected, description = 'Bridge closed in at least one direction'] of [['eastbound','Bridge closed eastbound'],['westbound','Bridge closed westbound'],['both','Bridge closed in both directions'],['north','Bridge closed in at least one direction'],['westbound','Diversion available in at least one direction; bridge closed westbound','Diversion available in at least one direction; bridge closed westbound']]) {
+    const legacy=dashboard(async path=>response(path.includes('events')?[{_id:'legacy',status:'CLOSED',direction,description,timestamp:new Date().toISOString()}]:{}));await tick();assert.ok(legacy.render().includes(expected));legacy.cleanup();
+  }
   assert.match(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);assert.doesNotMatch(history.render(),/No recent events found/);
   eventsFail=false;history.click('Retry history');await tick();assert.equal(historyRequests,3);assert.doesNotMatch(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);history.cleanup();
   const rejected=dashboard(async()=>{throw Error('offline')});await tick();assert.equal(rejected.state[0].lastUpdated,'Unavailable');assert.equal(rejected.state[0].freshness,'error');rejected.cleanup();

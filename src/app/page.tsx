@@ -219,6 +219,12 @@ export default function Home() {
     };
   };
 
+  const eventDescription = (record: BridgeStatusRecord) => {
+    const direction = record.direction === "eastbound" || record.direction === "westbound"
+      ? record.direction : record.direction === "both" ? "in both directions" : "in at least one direction";
+    return record.description.replace(/^(Bridge (?:is )?(?:closed|experiencing delays)) in at least one direction$/, `$1 ${direction}`);
+  };
+
   const getEventDot = (status: string) => {
     switch (status.toLowerCase()) {
       case "open": return "bg-emerald-400";
@@ -420,7 +426,7 @@ export default function Home() {
                   >
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getEventDot(record.status)}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate">{record.description}</p>
+                      <p className="text-sm text-foreground truncate">{eventDescription(record)}</p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0 text-xs text-muted-foreground">
                       {record.averageSpeed != null && (
