@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 (async () => {
-  const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '0'], { stdio: ['ignore', 'pipe', 'inherit'], windowsHide: true });
+  const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '0'], { stdio: ['ignore', 'pipe', 'inherit'], windowsHide: true, env: { ...process.env, TOMTOM_API_KEY: '', HERE_API_KEY: '', NATIONAL_HIGHWAYS_API_KEY: '', MONGODB_URI: '', HTTP_PROXY: 'http://127.0.0.1:1', HTTPS_PROXY: 'http://127.0.0.1:1', NO_PROXY: '127.0.0.1,localhost' } });
   let startupTimer;
   try {
     const url = await new Promise((resolve, reject) => {
@@ -40,6 +40,20 @@ const { spawn } = require('node:child_process');
       assert.ok(tags.length > 1);
       for (const tag of tags) assert.ok(tag.includes(`nonce="${nonce}"`), path + ': ' + tag);
     }
+    for (const path of ['/api/bridge-status', '/api/events', '/api/weather']) {
+      const result = await fetch(url + path, { signal: AbortSignal.timeout(15000) });
+      assert.ok([200, 503].includes(result.status), path + ' must return its availability contract');
+      assert.match(result.headers.get('content-type'), /application\/json/);
+      assert.match(result.headers.get('cache-control'), /no-store/);
+      const body = await result.json();
+      if (path === '/api/weather') { assert.equal(result.status, 503); assert.equal(body.data, null); }
+      if (path === '/api/events') assert.equal(result.status, 503);
+      if (path === '/api/bridge-status' && body.success) {
+        assert.equal(body.trafficData.directions.eastbound.status, 'UNKNOWN');
+        assert.equal(body.trafficData.directions.westbound.status, 'UNKNOWN');
+      }
+    }
+    console.log('Production API routes: offline availability contracts and no-store headers passed.');
     console.log('Production CSP: unique matching script nonces on pages and HTML 404s, no shared HTML caching or inline/eval bypass.');
   } finally { clearTimeout(startupTimer); server.kill(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -39,9 +39,12 @@ At least one usable traffic provider is needed for live traffic. Providers can f
 npm run lint
 npx tsc --noEmit
 npm run build
+npm run check
 ```
 
-Run the regression scripts in `scripts/check-*.cjs` with Node after the build. Configure an operational monitor and its notification recipient before relying on automated availability alerts. No alert recipient is configured by the credential template.
+The Release checks workflow runs lint, type checking, production build and all `scripts/check-*.cjs` regressions on pull requests and master pushes. Check its result before merging or releasing. This workflow reports validation status; mandatory branch-protection enforcement is not configured by this change.
+
+The Production bridge health workflow checks the public API every 15 minutes and supports manual dispatch. It fails on stale, fallback, unavailable or unconfirmed data. Operator delivery depends on GitHub Actions notification settings and has not been verified; choose and test a recipient before relying on alerts. No alert recipient is configured by the credential template.
 
 ## Deployment
 

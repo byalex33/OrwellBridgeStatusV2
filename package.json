@@ -6,7 +6,9 @@
     "dev": "cross-env NODE_OPTIONS=--max-http-header-size=65536 next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check": "node scripts/run-checks.cjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/analytics": "^1.5.0",
