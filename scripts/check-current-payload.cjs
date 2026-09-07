@@ -24,7 +24,14 @@ new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/app/a
     assert.equal(body.directions, undefined);
     assert.equal(body.overallStatus, undefined);
   }
+  observation.overallStatus.status = 'CLOSED';
+  for (const [east, west, expected] of [['CLOSED', 'DELAYED', 'eastbound'], ['UNKNOWN', 'CLOSED', 'westbound'], ['CLOSED', 'CLOSED', 'both']]) {
+    cache.clear();
+    observation.directions.eastbound.status = east;
+    observation.directions.westbound.status = west;
+    assert.equal((await mod.exports.GET()).data[0].direction, expected);
+  }
   assert.equal(reads, 0);
-  assert.equal(deferred.length, 1, 'history persistence runs after the response');
+  assert.equal(deferred.length, 4, 'history persistence runs after the response');
   console.log('Current payload checks passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });
