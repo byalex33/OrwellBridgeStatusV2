@@ -71,6 +71,7 @@ export default function Home() {
     const fetchBridgeStatusHistory = async () => {
       if (running) return;
       running = true;
+      setWeatherLoading(true);
       await Promise.allSettled([
         request("/api/bridge-status").then(({ response: bridgeResponse, result: bridgeResult }: { response: Response; result: BridgeStatusResponse }) => {
         if (bridgeResponse.ok && bridgeResult?.success) {
@@ -90,7 +91,7 @@ export default function Home() {
 
           const age = apiTimestamp ? Date.now() - new Date(apiTimestamp).getTime() : NaN;
           if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 600000 || age < -60000 || bridgeResult.stale || bridgeResult.fallback)) {
-            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: "stale" }));
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: bridgeResult.fallback ? "fallback" : "stale" }));
             setTrafficData(null);
           } else if (bridgeResult.trafficData) {
             const { directions } = bridgeResult.trafficData;
@@ -389,7 +390,7 @@ export default function Home() {
           </div>
           <div className="mt-2.5 flex items-center gap-2 text-sm text-muted-foreground px-1">
             <WeatherIcon description={weather?.description ?? "Unknown"} className="h-4 w-4" />
-            <span>{weather?.description ?? (weatherLoading ? "Loading weather…" : "Weather unavailable")}</span>
+            <span>{weatherLoading ? (weather ? "Updating weather…" : "Loading weather…") : weather?.description ?? "Weather unavailable"}</span>
           </div>
           {weather && weather.windSpeed > 30 && (
             <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200 mt-3">
@@ -470,4 +471,3 @@ export default function Home() {
     </div>
   );
 }
-
