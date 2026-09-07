@@ -8,3 +8,4 @@ assert.equal(analyze({ flowSegmentData: { currentSpeed: 0, freeFlowSpeed: 70, ro
 assert.equal(analyze({ flowSegmentData: { roadClosure: true } }).status, 'CLOSED');
 assert.equal(analyze({ flowSegmentData: {} }).status, 'UNKNOWN');
 console.log('Classification checks passed');
+assert.equal(analyze({ flowSegmentData: { roadClosure: true, currentSpeed: 'bad' } }).averageSpeed, 0);

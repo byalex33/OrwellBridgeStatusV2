@@ -51,6 +51,7 @@ export async function GET() {
         description: record.description,
         direction: record.direction,
         averageSpeed: record.averageSpeed,
+        speedUnit: record.speedUnit === 'mph' ? 'mph' : undefined,
         __v: record.__v || 0,
       }));
 
@@ -84,3 +85,4 @@ export async function GET() {
     return jsonNoStore([], { status: 503 });
   }
 }
+
