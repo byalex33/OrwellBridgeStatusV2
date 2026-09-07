@@ -28,6 +28,9 @@ const tick = () => new Promise(setImmediate);
   await tick();
   assert.equal(page.state[0].eastbound,'open');
   assert.equal(page.state[0].westbound,'closed');
+  assert.match(page.render(), /Check official National Highways bridge updates/);
+  assert.match(page.render(), /This independent site is not operated by National Highways/);
+
   assert.match(page.render(), /role="status"[^>]*>Eastbound Open\. Westbound Closed\./);
   assert.equal(page.state[5],false,'history finishes while weather hangs');
   page.poll();await tick();assert.equal(calls,3,'overlapping refresh skipped');
@@ -50,6 +53,9 @@ const tick = () => new Promise(setImmediate);
   for (const [direction, expected, description = 'Bridge closed in at least one direction'] of [['eastbound','Bridge closed eastbound'],['westbound','Bridge closed westbound'],['both','Bridge closed in both directions'],['north','Bridge closed in at least one direction'],['westbound','Diversion available in at least one direction; bridge closed westbound','Diversion available in at least one direction; bridge closed westbound']]) {
     const legacy=dashboard(async path=>response(path.includes('events')?[{_id:'legacy',status:'CLOSED',direction,description,timestamp:new Date().toISOString()}]:{}));await tick();assert.ok(legacy.render().includes(expected));legacy.cleanup();
   }
+  const freshWeather=dashboard(async path=>response(path.includes('weather')?{success:true,data:{timestamp:new Date().toISOString(),temperature:12,windSpeed:10,windDirection:0,description:'Clear'}}:path.includes('events')?[]:{}));await tick();
+  assert.match(freshWeather.render(),/Nearby Open-Meteo model estimate/);assert.doesNotMatch(freshWeather.render(),/outdated/);
+  freshWeather.state[1].timestamp='2020-01-01T00:00:00Z';freshWeather.age();assert.match(freshWeather.render(),/outdated/);assert.match(freshWeather.render(),/Weather unavailable/);freshWeather.cleanup();
   assert.match(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);assert.doesNotMatch(history.render(),/No recent events found/);
   eventsFail=false;history.click('Retry history');await tick();assert.equal(historyRequests,3);assert.doesNotMatch(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);history.cleanup();
   const rejected=dashboard(async()=>{throw Error('offline')});await tick();assert.equal(rejected.state[0].lastUpdated,'Unavailable');assert.equal(rejected.state[0].freshness,'error');rejected.cleanup();

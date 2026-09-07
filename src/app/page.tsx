@@ -3,7 +3,7 @@
 import InstallApp from '@/components/InstallApp';
 
 import {
-  Thermometer, Wind, ArrowUp, Clock, AlertTriangle, Gauge, Heart, Coffee,
+  Thermometer, Wind, ArrowUp, AlertTriangle, Gauge, Heart, Coffee,
   Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -22,6 +22,7 @@ interface BridgeStatus {
 }
 
 interface WeatherData {
+  timestamp: string;
   temperature: number;
   windSpeed: number;
   windDirection: number;
@@ -48,7 +49,7 @@ export default function Home() {
     freshness: "loading",
   });
 
-  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherObservation, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
 
   const [pastEvents, setPastEvents] = useState<BridgeStatusRecord[]>([]);
@@ -58,6 +59,7 @@ export default function Home() {
   const [eventsError, setEventsError] = useState(false);
   const [eventsUpdatedAt, setEventsUpdatedAt] = useState<string | null>(null);
   const [weatherError, setWeatherError] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -133,7 +135,7 @@ export default function Home() {
         }),
         request("/api/weather").then(({ response, result: weatherResult }: { response: Response; result: WeatherResponse }) => {
           const data = weatherResult.data;
-          if (!response.ok || !weatherResult.success || !data || ![data.temperature, data.windSpeed, data.windDirection].every(Number.isFinite) || data.windSpeed < 0 || data.windDirection < 0 || data.windDirection > 360 || typeof data.description !== "string") throw new Error("Weather unavailable");
+          if (!response.ok || !weatherResult.success || !data || ![data.temperature, data.windSpeed, data.windDirection].every(Number.isFinite) || data.windSpeed < 0 || data.windDirection < 0 || data.windDirection > 360 || typeof data.description !== "string" || !Number.isFinite(new Date(data.timestamp).getTime())) throw new Error("Weather unavailable");
           setWeather(data);
           setWeatherError(false);
         }).catch(() => {
@@ -165,6 +167,7 @@ export default function Home() {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      setNow(Date.now());
       setBridgeStatus(prev => {
         const age = prev.observedAt ? Date.now() - new Date(prev.observedAt).getTime() : NaN;
         return (prev.freshness === "live" || prev.freshness === "cached") && (!Number.isFinite(age) || age > 600000 || age < -60000)
@@ -173,6 +176,9 @@ export default function Home() {
     }, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  const weatherAge = weatherObservation ? now - new Date(weatherObservation.timestamp).getTime() : NaN;
+  const weather = Number.isFinite(weatherAge) && weatherAge >= -60000 && weatherAge <= 1800000 ? weatherObservation : null;
 
   const getStatusColor = (status: LaneStatus) => {
     switch (status) {
@@ -253,7 +259,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{bridgeStatus.freshness === "loading" ? "Checking bridge status." : `Eastbound ${getStatusText(bridgeStatus.eastbound)}. Westbound ${getStatusText(bridgeStatus.westbound)}.${isWarning ? " Current traffic data is not confirmed." : ""}`}{weatherError ? " Weather unavailable." : ""}{eventsError ? " History unavailable." : ""}</p>
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{bridgeStatus.freshness === "loading" ? "Checking bridge status." : `Eastbound ${getStatusText(bridgeStatus.eastbound)}. Westbound ${getStatusText(bridgeStatus.westbound)}.${isWarning ? " Current traffic data is not confirmed." : ""}`}{weatherError || (weatherObservation && !weather) ? " Weather unavailable." : ""}{eventsError ? " History unavailable." : ""}</p>
 
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-4">
@@ -286,6 +292,7 @@ export default function Home() {
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
 
         <button type="button" className="text-sm underline" onClick={() => setRefresh(value => value + 1)}>Refresh status</button>
+        <p className="text-sm text-muted-foreground"><a className="underline" href="https://nationalhighways.co.uk/roads-and-travel/live-travel-updates/the-orwell-bridge/">Check official National Highways bridge updates</a>. This independent site is not operated by National Highways. Follow official instructions and road signs.</p>
         {/* Staleness / error warning */}
         {isWarning && (
           <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200">
@@ -331,30 +338,11 @@ export default function Home() {
                     {getStatusText(status)}
                   </span>
                 </div>
+                <p className="text-sm text-muted-foreground mt-3">{traffic?.details || "No current directional observation is available. Check the official bridge updates above."}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Delay detail banners */}
-        {bridgeStatus.eastbound === "delayed" && trafficData?.eastbound?.details && (
-          <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-200/90">
-            <Clock className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
-            <p className="text-sm">
-              <span className="font-medium text-amber-400">Eastbound · </span>
-              {trafficData.eastbound.details}
-            </p>
-          </div>
-        )}
-        {bridgeStatus.westbound === "delayed" && trafficData?.westbound?.details && (
-          <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-200/90">
-            <Clock className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
-            <p className="text-sm">
-              <span className="font-medium text-amber-400">Westbound · </span>
-              {trafficData.westbound.details}
-            </p>
-          </div>
-        )}
 
         {/* Weather */}
         <div>
@@ -397,10 +385,11 @@ export default function Home() {
             <WeatherIcon description={weather?.description ?? "Unknown"} className="h-4 w-4" />
             <span>{weatherLoading ? (weather ? "Updating weather…" : "Loading weather…") : weather?.description ?? "Weather unavailable"}</span>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">Nearby Open-Meteo model estimate{weatherObservation ? ` · Model time ${new Date(weatherObservation.timestamp).toLocaleString("en-GB", { timeZone: "Europe/London" })}${!weather ? " (outdated)" : ""}` : ""}. Wind is a mean at 10 m, not a gust or a bridge restriction. <a className="underline" href="https://nationalhighways.co.uk/roads-and-travel/live-travel-updates/the-orwell-bridge/">Official wind and bridge guidance</a>.</p>
           {weather && weather.windSpeed > 30 && (
             <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200 mt-3">
               <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
-              <p className="text-sm">High wind warning — bridge may be restricted for high-sided vehicles</p>
+              <p className="text-sm">Strong winds nearby. This estimate does not confirm a bridge restriction; follow official updates and road signs.</p>
             </div>
           )}
         </div>
@@ -462,7 +451,7 @@ export default function Home() {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             Created with <Heart className="h-3.5 w-3.5 text-rose-400 fill-rose-400 mx-0.5" /> by Alex
           </div>
-          <p className="text-xs text-muted-foreground">Data: TomTom Traffic API · Open-Meteo</p>
+          <p className="text-xs text-muted-foreground">Traffic: TomTom; HERE and National Highways where configured and available. Weather: Open-Meteo.</p>
           <a
             href="https://ko-fi.com/alexbaldry"
             target="_blank"
