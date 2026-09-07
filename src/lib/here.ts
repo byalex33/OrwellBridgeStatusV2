@@ -12,7 +12,7 @@ export interface HereDirectionalStatus {
 export interface HereTrafficData {
   status: 'OPEN' | 'DELAYED' | 'CLOSED' | 'UNKNOWN';
   details: string;
-  averageSpeed: number;
+  averageSpeed: number | null;
   description: string;
 }
 
@@ -34,7 +34,7 @@ interface HereResponse {
 
 export function analyzeHereFlow(results: HereFlowResult[]): Omit<HereTrafficData, 'description'> {
   const closed = results.some(r => r.currentFlow?.traversability === 'closed' || r.currentFlow?.jamFactor === 10);
-  if (closed) return { status: 'CLOSED', details: 'HERE reports a road closure', averageSpeed: 0 };
+  if (closed) return { status: 'CLOSED', details: 'HERE reports a road closure', averageSpeed: null };
   const valid = results.filter(r => typeof r.currentFlow?.speed === 'number' &&
     Number.isFinite(r.currentFlow.speed) && r.currentFlow.speed >= 0 &&
     typeof r.currentFlow.jamFactor === 'number' && Number.isFinite(r.currentFlow.jamFactor) &&
@@ -42,7 +42,7 @@ export function analyzeHereFlow(results: HereFlowResult[]): Omit<HereTrafficData
     typeof r.currentFlow.confidence === 'number' && r.currentFlow.confidence > 0.7 && r.currentFlow.confidence <= 1);
 
   if (!valid.length) {
-    return { status: 'UNKNOWN', details: 'No HERE flow data returned', averageSpeed: 0 };
+    return { status: 'UNKNOWN', details: 'No HERE flow data returned', averageSpeed: null };
   }
 
   const worstJam = Math.max(...valid.map(r => r.currentFlow?.jamFactor ?? 0));
@@ -73,4 +73,5 @@ export async function getHereTrafficData(): Promise<HereDirectionalStatus> {
   }
   return result;
 }
+
 

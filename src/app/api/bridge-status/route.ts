@@ -22,7 +22,7 @@ type DbBridgeRecord = {
   timestamp?: Date | string;
   description?: string;
   direction?: string;
-  averageSpeed?: number;
+  averageSpeed?: number | null;
   speedUnit?: 'mph';
   __v?: number;
 };
@@ -88,7 +88,7 @@ function mapBridgeRecord(record: DbBridgeRecord): BridgeStatusRecord {
     timestamp: normalizeTimestamp(record.timestamp),
     description: record.description || 'No description available',
     direction: normalizeDirection(record.direction),
-    averageSpeed: record.averageSpeed || 0,
+    averageSpeed: record.speedUnit === 'mph' ? record.averageSpeed ?? null : null,
     speedUnit: record.speedUnit === 'mph' ? 'mph' : undefined,
     __v: record.__v || 0,
   };
@@ -123,7 +123,7 @@ function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTraf
     description: trafficData.overallStatus.details,
     direction: 'both',
     speedUnit: 'mph',
-    averageSpeed: Math.round(
+    averageSpeed: trafficData.directions.eastbound.averageSpeed == null || trafficData.directions.westbound.averageSpeed == null ? null : Math.round(
       (trafficData.directions.eastbound.averageSpeed + trafficData.directions.westbound.averageSpeed) / 2
     ),
     __v: 0,
@@ -296,3 +296,4 @@ export async function GET() {
     );
   }
 }
+
