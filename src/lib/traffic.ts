@@ -1,15 +1,6 @@
 import axios from 'axios';
 
-const BRIDGE_POINTS = {
-  eastbound: {
-    point: "52.0449,1.1700",
-    description: "A14 Eastbound (Ipswich to Felixstowe)"
-  },
-  westbound: {
-    point: "52.0452,1.1735",
-    description: "A14 Westbound (Felixstowe to Ipswich)"
-  }
-};
+import { BRIDGE_POINTS } from './bridge';
 
 export interface TrafficData {
   status: 'OPEN' | 'DELAYED' | 'CLOSED' | 'UNKNOWN';
@@ -196,5 +187,6 @@ export async function getBridgeTrafficData(): Promise<{
     timestamp: new Date()
   };
 }
+
 
 
