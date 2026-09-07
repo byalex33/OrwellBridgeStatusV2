@@ -14,7 +14,7 @@ class SimpleCache {
       data,
       timestamp: Date.now(),
       ttl: ttlSeconds * 1000,
-      staleTime: staleSeconds ? staleSeconds * 1000 : undefined
+      staleTime: staleSeconds !== undefined ? staleSeconds * 1000 : undefined
     });
   }
 
@@ -46,7 +46,7 @@ class SimpleCache {
     }
 
     // Data is stale but still within TTL
-    const staleTime = entry.staleTime || entry.ttl * 0.8; // Default stale time is 80% of TTL
+    const staleTime = entry.staleTime ?? entry.ttl;
     const isStale = age > staleTime;
 
     return { data: entry.data as T, isStale };
@@ -60,8 +60,8 @@ class SimpleCache {
     staleSeconds?: number
   ): Promise<T> {
     // Check if we have fresh data
-    const cached = this.get<T>(key);
-    if (cached) return cached;
+    const cached = this.getWithStale<T>(key);
+    if (this.cache.has(key) && !cached.isStale) return cached.data as T;
 
     // Check if there's already a pending request for this key
     const pending = this.pendingRequests.get(key);
@@ -70,12 +70,14 @@ class SimpleCache {
     }
 
     // Create new request
-    const promise = fetchFn().then(data => {
-      this.set(key, data, ttlSeconds, staleSeconds);
-      this.pendingRequests.delete(key);
+    const promise = Promise.resolve().then(fetchFn).then(data => {
+      if (this.pendingRequests.get(key) === promise) {
+        this.set(key, data, ttlSeconds, staleSeconds);
+        this.pendingRequests.delete(key);
+      }
       return data;
     }).catch(error => {
-      this.pendingRequests.delete(key);
+      if (this.pendingRequests.get(key) === promise) this.pendingRequests.delete(key);
       throw error;
     });
 

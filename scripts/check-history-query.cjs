@@ -21,11 +21,13 @@ function load(path, dependencies = {}) {
 const route = load('src/app/api/events/route.ts', {
   'next/server': { NextResponse: { json: body => body } },
   '@/lib/records': load('src/lib/records.ts'),
-  '@/lib/cache': { cache: { get: () => null, set: () => {} } },
+  '@/lib/cache': { cache: { get: () => null, set: () => {}, getOrFetch: (_key, fn) => fn() } },
   '@/lib/mongodb': { default: () => Promise.resolve({ db: () => ({ collection: () => collection }) }) },
 });
-route.GET().then(records => {
+route.GET().then(async records => {
   assert.deepEqual(records.map(r => r._id), ['0','1','2','3','4']);
   assert.ok(records.every(r => r.status === 'DELAYED'));
-  console.log('Mixed date/string history ordering check passed');
+  fixtures.length = 0;
+  assert.deepEqual(await route.GET(), [], 'empty history is a successful array response');
+  console.log('Mixed date/string history ordering and empty-result checks passed');
 }).catch(error => { console.error(error); process.exitCode = 1; });

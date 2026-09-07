@@ -21,13 +21,7 @@ function jsonNoStore<T>(body: T, init?: ResponseInit) {
 
 export async function GET() {
   try {
-    const cachedEvents = cache.get<BridgeStatusRecord[] | {message: string}>('events-data');
-    if (cachedEvents) {
-      return jsonNoStore(cachedEvents);
-    }
-
-    let events: BridgeStatusRecord[] = [];
-    try {
+    const events = await cache.getOrFetch('events-data', async () => {
       const clientPromise = import('@/lib/mongodb').then(m => m.default());
       const client = await clientPromise;
 
@@ -46,36 +40,12 @@ export async function GET() {
         ])
         .toArray();
 
-      events = records.map(mapBridgeRecord).filter((record): record is BridgeStatusRecord => record !== null);
-
-
-    } catch (dbError) {
-      console.error('MongoDB error in events API', {
-        message: dbError instanceof Error ? dbError.message : 'Unknown error'
-      });
-      const fallbackResponse = {
-        message: "Events unavailable"
-      };
-      return jsonNoStore(fallbackResponse, { status: 503 });
-    }
-
-    if (events.length === 0) {
-      const responseData = {
-        message: "No closures or delays in the last 24 hours"
-      };
-      cache.set('events-data', responseData, 600);
-      return jsonNoStore(responseData);
-    }
-
-    cache.set('events-data', events, 600);
+      return records.map(mapBridgeRecord).filter((record): record is BridgeStatusRecord => record !== null);
+    }, 600);
     return jsonNoStore(events);
-
   } catch (error) {
-    console.error('Events API error', {
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-
-    return jsonNoStore([], { status: 503 });
+    console.error('Events API error', { message: error instanceof Error ? error.message : 'Unknown error' });
+    return jsonNoStore({ message: 'Events unavailable' }, { status: 503 });
   }
 }
 

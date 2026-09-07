@@ -29,7 +29,7 @@ export async function GET() {
       });
     }
 
-    const weatherData = await getWeatherData();
+    const weatherData = await cache.getOrFetch('weather-data', getWeatherData, 900);
 
     cache.set('weather-data', weatherData, Math.min(900, Math.max(0, (Date.parse(weatherData.timestamp) + 1800000 - Date.now()) / 1000)));
 
