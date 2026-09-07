@@ -61,6 +61,7 @@ function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTraf
     timestamp: trafficData.timestamp.toISOString(),
     description: trafficData.overallStatus.details,
     direction: 'both',
+    speedUnit: 'mph',
     averageSpeed: Math.round(
       (trafficData.directions.eastbound.averageSpeed + trafficData.directions.westbound.averageSpeed) / 2
     ),
@@ -78,6 +79,7 @@ async function saveCurrentRecord(currentRecord: BridgeStatusRecord): Promise<Bri
     description: currentRecord.description,
     direction: currentRecord.direction,
     averageSpeed: currentRecord.averageSpeed,
+    speedUnit: currentRecord.speedUnit,
   });
   console.log('MongoDB insert result:', insertResult.insertedId);
 
