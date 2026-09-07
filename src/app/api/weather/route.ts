@@ -62,26 +62,10 @@ export async function GET() {
       });
     }
 
-    const fallbackData = {
-      temperature: 12,
-      windSpeed: 25,
-      windDirection: 270,
-      description: 'Weather unavailable',
-      icon: '❓'
-    };
-
     return jsonNoStore({
       success: false,
       error: 'Failed to fetch weather data',
-      data: fallbackData,
-      current: {
-        temp_c: fallbackData.temperature,
-        wind_mph: fallbackData.windSpeed,
-        condition: {
-          text: fallbackData.description,
-          icon: fallbackData.icon
-        }
-      }
+      data: null
     }, { status: 503 });
   }
 }

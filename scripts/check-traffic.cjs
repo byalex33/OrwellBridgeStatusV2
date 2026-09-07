@@ -25,8 +25,10 @@ async function main() {
   const result = await traffic.getBridgeTrafficData();
   assert.equal(requests, 2);
   assert.equal(result.directions.eastbound.averageSpeed, 62);
+  assert.match(result.directions.eastbound.description, /TomTom/);
   console.log('Traffic regression checks passed');
 }
 if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
 module.exports = { load };
+
 
