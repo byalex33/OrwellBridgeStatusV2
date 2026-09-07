@@ -158,7 +158,7 @@ async function fetchTomTomData(): Promise<DirectionalStatus> {
 
       directionalStatus[direction] = {
         ...analyzeBridgeStatus(trafficResponse.data),
-        description: BRIDGE_POINTS[direction].description
+        description: `${BRIDGE_POINTS[direction].description} (TomTom)`
       };
     } catch (error) {
       console.error(`Error fetching traffic data for ${direction}`, {
@@ -169,7 +169,7 @@ async function fetchTomTomData(): Promise<DirectionalStatus> {
         status: 'UNKNOWN',
         details: `Unable to fetch traffic data for ${direction} direction`,
         averageSpeed: null,
-        description: BRIDGE_POINTS[direction].description
+        description: `${BRIDGE_POINTS[direction].description} (TomTom)`
       };
     }
   }
@@ -200,5 +200,6 @@ export async function getBridgeTrafficData() {
   }
   return { directions, overallStatus: determineOverallStatus(directions), timestamp: new Date() };
 }
+
 
 
