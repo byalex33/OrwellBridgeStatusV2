@@ -133,7 +133,7 @@ export default function Home() {
 
         }).catch(() => {
           if (!controller.signal.aborted) {
-            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", isRealTime: false, freshness: "error" }));
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated: "Unavailable", isRealTime: false, freshness: "error" }));
             setTrafficData(null);
           }
         }),

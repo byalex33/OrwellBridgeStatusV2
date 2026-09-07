@@ -34,6 +34,7 @@ const tick = () => new Promise(setImmediate);
   assert.equal(page.state[0].freshness,'stale');
   assert.doesNotMatch(page.render(), /undefined mph/);
   page.cleanup();
+  const rejected=dashboard(async()=>{throw Error('offline')});await tick();assert.equal(rejected.state[0].lastUpdated,'Unavailable');assert.equal(rejected.state[0].freshness,'error');rejected.cleanup();
   console.log('F14: independent panel updates, pending-request overlap guard passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
 module.exports={dashboard,response,tick};
