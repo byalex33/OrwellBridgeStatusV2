@@ -40,9 +40,12 @@ async function getBridgeCollection() {
 async function fetchHistoricalRecords(limit: number): Promise<BridgeStatusRecord[]> {
   const collection = await getBridgeCollection();
   const records = await collection
-    .find({})
-    .sort({ timestamp: -1 })
-    .limit(limit)
+    .aggregate<DbBridgeRecord>([
+      { $set: { timestamp: { $convert: { input: '$timestamp', to: 'date', onError: null, onNull: null } } } },
+      { $match: { timestamp: { $ne: null } } },
+      { $sort: { timestamp: -1 } },
+      { $limit: limit },
+    ])
     .toArray();
 
   return records
