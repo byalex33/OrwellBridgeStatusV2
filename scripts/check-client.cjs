@@ -30,7 +30,8 @@ const tick = () => new Promise(setImmediate);
   assert.equal(page.state[0].westbound,'closed');
   assert.match(page.render(), /Check official National Highways bridge updates/);
   assert.match(page.render(), /This independent site is not operated by National Highways/);
-  assert.match(page.render(), /role="status"[^>]*>Eastbound Open. Westbound Closed./);
+
+  assert.match(page.render(), /role="status"[^>]*>Eastbound Open\. Westbound Closed\./);
   assert.equal(page.state[5],false,'history finishes while weather hangs');
   page.poll();await tick();assert.equal(calls,3,'overlapping refresh skipped');
   page.state[0].observedAt = '2020-01-01T12:00:00Z';
