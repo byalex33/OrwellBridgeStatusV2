@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Thermometer, Wind, ArrowUp, Clock, AlertTriangle, Gauge, Heart, Coffee,
+  Thermometer, Wind, ArrowUp, AlertTriangle, Gauge, Heart, Coffee,
   Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -290,6 +290,7 @@ export default function Home() {
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
 
         <button type="button" className="text-sm underline" onClick={() => setRefresh(value => value + 1)}>Refresh status</button>
+        <p className="text-sm text-muted-foreground"><a className="underline" href="https://nationalhighways.co.uk/roads-and-travel/live-travel-updates/the-orwell-bridge/">Check official National Highways bridge updates</a>. This independent site is not operated by National Highways. Follow official instructions and road signs.</p>
         {/* Staleness / error warning */}
         {isWarning && (
           <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200">
@@ -335,30 +336,11 @@ export default function Home() {
                     {getStatusText(status)}
                   </span>
                 </div>
+                <p className="text-sm text-muted-foreground mt-3">{traffic?.details || "No current directional observation is available. Check the official bridge updates above."}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Delay detail banners */}
-        {bridgeStatus.eastbound === "delayed" && trafficData?.eastbound?.details && (
-          <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-200/90">
-            <Clock className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
-            <p className="text-sm">
-              <span className="font-medium text-amber-400">Eastbound · </span>
-              {trafficData.eastbound.details}
-            </p>
-          </div>
-        )}
-        {bridgeStatus.westbound === "delayed" && trafficData?.westbound?.details && (
-          <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-200/90">
-            <Clock className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
-            <p className="text-sm">
-              <span className="font-medium text-amber-400">Westbound · </span>
-              {trafficData.westbound.details}
-            </p>
-          </div>
-        )}
 
         {/* Weather */}
         <div>
@@ -466,7 +448,7 @@ export default function Home() {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             Created with <Heart className="h-3.5 w-3.5 text-rose-400 fill-rose-400 mx-0.5" /> by Alex
           </div>
-          <p className="text-xs text-muted-foreground">Data: TomTom Traffic API · Open-Meteo</p>
+          <p className="text-xs text-muted-foreground">Traffic: TomTom; HERE and National Highways where configured and available. Weather: Open-Meteo.</p>
           <a
             href="https://ko-fi.com/alexbaldry"
             target="_blank"
