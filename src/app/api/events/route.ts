@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { BridgeStatusRecord } from '@/types/bridge';
+import { mapBridgeRecord } from '@/lib/records';
 import { cache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
@@ -38,21 +39,13 @@ export async function GET() {
       const records = await collection
         .find({
           status: { $in: ['CLOSED', 'DELAYS', 'DELAYED'] },
-          timestamp: { $gte: since }
+          $expr: { $gte: [{ $convert: { input: '$timestamp', to: 'date', onError: null, onNull: null } }, since] }
         })
         .sort({ timestamp: -1 })
         .limit(5)
         .toArray();
 
-      events = records.map((record) => ({
-        _id: record._id.toString(),
-        status: record.status,
-        timestamp: record.timestamp.toISOString(),
-        description: record.description,
-        direction: record.direction,
-        averageSpeed: record.averageSpeed,
-        __v: record.__v || 0,
-      }));
+      events = records.map(mapBridgeRecord).filter((record): record is BridgeStatusRecord => record !== null);
 
 
     } catch (dbError) {

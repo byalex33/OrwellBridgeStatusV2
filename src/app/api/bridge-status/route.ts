@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { BridgeStatusRecord } from '@/types/bridge';
 import { getBridgeTrafficData } from '@/lib/traffic';
 import type { DirectionalStatus, OverallStatus } from '@/lib/traffic';
+import { mapBridgeRecord, type DbBridgeRecord } from '@/lib/records';
 import { cache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
@@ -16,16 +17,6 @@ type BridgeCacheEntry = {
   };
 };
 
-type DbBridgeRecord = {
-  _id?: { toString(): string };
-  status?: string;
-  timestamp?: Date | string;
-  description?: string;
-  direction?: string;
-  averageSpeed?: number;
-  __v?: number;
-};
-
 const noStoreHeaders = {
   'Cache-Control': 'no-store, max-age=0',
   'CDN-Cache-Control': 'no-store',
@@ -37,59 +28,6 @@ function jsonNoStore<T>(body: T, init?: ResponseInit) {
     ...init,
     headers: noStoreHeaders,
   });
-}
-
-function normalizeStatus(status: string | undefined): BridgeStatusRecord['status'] {
-  if (status === 'CLOSED' || status === 'DELAYED' || status === 'OPEN' || status === 'UNKNOWN') {
-    return status;
-  }
-
-  if (status === 'DELAYS') {
-    return 'DELAYED';
-  }
-
-  return 'UNKNOWN';
-}
-
-function normalizeDirection(direction: string | undefined): BridgeStatusRecord['direction'] {
-  if (
-    direction === 'both' ||
-    direction === 'north' ||
-    direction === 'south' ||
-    direction === 'eastbound' ||
-    direction === 'westbound'
-  ) {
-    return direction;
-  }
-
-  return 'both';
-}
-
-function normalizeTimestamp(timestamp: Date | string | undefined): string {
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-
-  if (timestamp) {
-    const parsed = new Date(timestamp);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString();
-    }
-  }
-
-  return new Date().toISOString();
-}
-
-function mapBridgeRecord(record: DbBridgeRecord): BridgeStatusRecord {
-  return {
-    _id: record._id?.toString() || `record_${normalizeTimestamp(record.timestamp)}`,
-    status: normalizeStatus(record.status),
-    timestamp: normalizeTimestamp(record.timestamp),
-    description: record.description || 'No description available',
-    direction: normalizeDirection(record.direction),
-    averageSpeed: record.averageSpeed || 0,
-    __v: record.__v || 0,
-  };
 }
 
 async function getBridgeCollection() {
@@ -109,7 +47,7 @@ async function fetchHistoricalRecords(limit: number, excludedId?: string): Promi
 
   return records
     .map(mapBridgeRecord)
-    .filter((record) => record._id !== excludedId)
+    .filter((record): record is BridgeStatusRecord => record !== null && record._id !== excludedId)
     .slice(0, limit);
 }
 
