@@ -50,7 +50,7 @@ export function parseClosures(data: Payload, now = Date.now()): DirectionalStatu
         if (!crossingDirection(points)) continue;
         const sections = location.locSingleRoadLinearLocation?.linearWithinLinearElement;
         if (!Array.isArray(sections)) continue;
-        const directions = sections.map(section => section.directionOnLinearSection);
+        const directions = sections.map(section => section?.directionOnLinearSection);
         for (const direction of ['eastbound', 'westbound'] as const) {
           const applies = directions.some(value => value === 'bothWays' || value === 'allDirections' || value === (direction === 'eastbound' ? 'eastBound' : 'westBound'));
           if (applies && result[direction].status !== 'CLOSED') result[direction] = {
@@ -73,7 +73,7 @@ export async function getNationalHighwaysData(): Promise<DirectionalStatus> {
     for (let page = 0; page < 20; page++) {
       const response: AxiosResponse<Payload> = await axios.get<Payload>(next ?? ENDPOINT, {
         headers: { 'Ocp-Apim-Subscription-Key': process.env.NATIONAL_HIGHWAYS_API_KEY, 'X-Response-MediaType': 'application/json' },
-        params: next ? undefined : { closureType, startDateTime: now.toISOString().slice(0, 19), endDateTime: now.toISOString().slice(0, 19) },
+        params: next ? undefined : { closureType, startDateTime: new Date(now.getTime() - 86400000).toISOString().slice(0, 19), endDateTime: new Date(now.getTime() + 86400000).toISOString().slice(0, 19) },
         timeout: 8000, maxRedirects: 0, signal,
       });
       const parsed = parseClosures(response.data);

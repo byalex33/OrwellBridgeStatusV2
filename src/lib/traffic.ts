@@ -79,7 +79,7 @@ function analyzeBridgeStatus(trafficData: unknown): Omit<TrafficData, 'descripti
     return {
       status,
       details,
-      averageSpeed: averageSpeed ?? null
+      averageSpeed: typeof averageSpeed === 'number' && Number.isFinite(averageSpeed) && averageSpeed >= 0 ? averageSpeed : null
     };
   } catch (error) {
     console.error('Error analyzing bridge status', {
@@ -145,7 +145,7 @@ async function fetchTomTomData(): Promise<DirectionalStatus> {
         {
           params: {
             point: point,
-            unit: 'MPH',
+            unit: 'mph',
             key: process.env.TOMTOM_API_KEY
           },
           timeout: 5000
@@ -200,4 +200,5 @@ export async function getBridgeTrafficData() {
   }
   return { directions, overallStatus: determineOverallStatus(directions), timestamp: new Date() };
 }
+
 

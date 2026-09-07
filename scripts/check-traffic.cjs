@@ -19,7 +19,7 @@ async function main() {
   let requests = 0;
   const traffic = load('src/lib/traffic.ts', { axios: { get: async (_url, options) => {
     requests++;
-    assert.equal(options.params.unit, 'MPH');
+    assert.equal(options.params.unit, 'mph');
     return { data: { flowSegmentData: { currentSpeed: 62, freeFlowSpeed: 70, roadClosure: false } } };
   } } }, { TOMTOM_API_KEY: 'fixture' });
   const result = await traffic.getBridgeTrafficData();
@@ -29,3 +29,4 @@ async function main() {
 }
 if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
 module.exports = { load };
+
