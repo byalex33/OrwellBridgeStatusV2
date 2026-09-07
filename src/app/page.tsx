@@ -93,7 +93,7 @@ export default function Home() {
 
           const age = apiTimestamp ? Date.now() - new Date(apiTimestamp).getTime() : NaN;
           if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 600000 || age < -60000 || bridgeResult.stale || bridgeResult.fallback)) {
-            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: "stale" }));
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: bridgeResult.fallback ? "fallback" : "stale" }));
             setTrafficData(null);
           } else if (bridgeResult.trafficData) {
             const { directions } = bridgeResult.trafficData;
@@ -458,3 +458,4 @@ export default function Home() {
     </div>
   );
 }
+
