@@ -26,7 +26,7 @@ const tick = () => new Promise(setImmediate);
   await tick();
   assert.equal(page.state[0].eastbound,'open');
   assert.equal(page.state[0].westbound,'closed');
-  assert.equal(page.state[4],false,'history finishes while weather hangs');
+  assert.equal(page.state[5],false,'history finishes while weather hangs');
   page.poll();await tick();assert.equal(calls,3,'overlapping refresh skipped');
   page.state[0].observedAt = '2020-01-01T12:00:00Z';
   page.age();
@@ -36,11 +36,16 @@ const tick = () => new Promise(setImmediate);
   page.cleanup();
   for (const direction of ['eastbound','westbound','both']) {
     const fallback=dashboard(async path=>response(path.includes('bridge-status') ? {success:true,fallback:true,data:[{status:'CLOSED',direction,timestamp:'2020-01-01T12:00:00Z'}]} : path.includes('events') ? [] : {}));
-    await tick();assert.equal(fallback.state[0].eastbound,'unknown');assert.equal(fallback.state[0].westbound,'unknown');assert.equal(fallback.state[3],null);fallback.cleanup();
+    await tick();assert.equal(fallback.state[0].eastbound,'unknown');assert.equal(fallback.state[0].westbound,'unknown');assert.equal(fallback.state[4],null);fallback.cleanup();
   }
+  const badWeather=dashboard(async path=>response(path.includes('weather')?{success:false,data:{temperature:12,windSpeed:25,windDirection:270}}:path.includes('events')?[]:{}));
+  assert.match(badWeather.render(), /Loading weather/);
+  await tick();assert.equal(badWeather.state[1],null);assert.match(badWeather.render(),/Weather unavailable/);badWeather.cleanup();
+  console.log('F08/F09/F10/F14: independent panel updates, pending-request overlap guard passed');
   console.log('F08/F09/F14: independent panel updates, pending-request overlap guard passed');
   const rejected=dashboard(async()=>{throw Error('offline')});await tick();assert.equal(rejected.state[0].lastUpdated,'Unavailable');assert.equal(rejected.state[0].freshness,'error');rejected.cleanup();
   console.log('F14: independent panel updates, pending-request overlap guard passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
 module.exports={dashboard,response,tick};
+
 

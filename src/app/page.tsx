@@ -46,13 +46,8 @@ export default function Home() {
     freshness: "loading",
   });
 
-  const [weather, setWeather] = useState<WeatherData>({
-    temperature: 0,
-    windSpeed: 0,
-    windDirection: 0,
-    description: "Loading...",
-    icon: "",
-  });
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   const [pastEvents, setPastEvents] = useState<BridgeStatusRecord[]>([]);
   const [trafficData, setTrafficData] = useState<TrafficDirections | null>(null);
@@ -74,6 +69,7 @@ export default function Home() {
     const fetchBridgeStatusHistory = async () => {
       if (running) return;
       running = true;
+      setWeatherLoading(true);
       await Promise.allSettled([
         request("/api/bridge-status").then(({ response: bridgeResponse, result: bridgeResult }: { response: Response; result: BridgeStatusResponse }) => {
         if (bridgeResponse.ok && bridgeResult?.success) {
@@ -130,8 +126,14 @@ export default function Home() {
             setTrafficData(null);
           }
         }),
-        request("/api/weather").then(({ result: weatherResult }: { result: WeatherResponse }) => {
-          if (weatherResult?.data) setWeather(weatherResult.data);
+        request("/api/weather").then(({ response, result: weatherResult }: { response: Response; result: WeatherResponse }) => {
+          const data = weatherResult.data;
+          if (!response.ok || !weatherResult.success || !data || ![data.temperature, data.windSpeed, data.windDirection].every(Number.isFinite) || data.windSpeed < 0 || data.windDirection < 0 || data.windDirection > 360 || typeof data.description !== "string") throw new Error("Weather unavailable");
+          setWeather(data);
+        }).catch(() => {
+          if (!controller.signal.aborted) setWeather(null);
+        }).finally(() => {
+          if (!controller.signal.aborted) setWeatherLoading(false);
         }),
         request("/api/events").then(({ response, result }) => {
           if (response.ok && Array.isArray(result)) setPastEvents(result);
@@ -351,7 +353,7 @@ export default function Home() {
                 <span className="text-xs">Temperature</span>
               </div>
               <div>
-                <span className="text-3xl font-mono font-semibold">{weather.temperature}</span>
+                <span className="text-3xl font-mono font-semibold">{weather?.temperature ?? "—"}</span>
                 <span className="text-lg text-muted-foreground ml-0.5">°C</span>
               </div>
             </div>
@@ -361,7 +363,7 @@ export default function Home() {
                 <span className="text-xs">Wind Speed</span>
               </div>
               <div>
-                <span className="text-3xl font-mono font-semibold">{weather.windSpeed}</span>
+                <span className="text-3xl font-mono font-semibold">{weather?.windSpeed ?? "—"}</span>
                 <span className="text-base text-muted-foreground ml-1">mph</span>
               </div>
             </div>
@@ -369,18 +371,18 @@ export default function Home() {
               <div className="flex items-center gap-1.5 text-muted-foreground mb-3">
                 <ArrowUp
                   className="h-3.5 w-3.5 transition-transform"
-                  style={{ transform: `rotate(${weather.windDirection}deg)` }}
+                  style={{ transform: `rotate(${weather?.windDirection ?? 0}deg)` }}
                 />
                 <span className="text-xs">Direction</span>
               </div>
-              <span className="text-3xl font-mono font-semibold">{getWindDirection(weather.windDirection)}</span>
+              <span className="text-3xl font-mono font-semibold">{weather ? getWindDirection(weather.windDirection) : "—"}</span>
             </div>
           </div>
           <div className="mt-2.5 flex items-center gap-2 text-sm text-muted-foreground px-1">
-            <WeatherIcon description={weather.description} className="h-4 w-4" />
-            <span>{weather.description}</span>
+            <WeatherIcon description={weather?.description ?? "Unknown"} className="h-4 w-4" />
+            <span>{weatherLoading ? (weather ? "Updating weather…" : "Loading weather…") : weather?.description ?? "Weather unavailable"}</span>
           </div>
-          {weather.windSpeed > 30 && (
+          {weather && weather.windSpeed > 30 && (
             <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200 mt-3">
               <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
               <p className="text-sm">High wind warning — bridge may be restricted for high-sided vehicles</p>
@@ -458,4 +460,5 @@ export default function Home() {
     </div>
   );
 }
+
 
