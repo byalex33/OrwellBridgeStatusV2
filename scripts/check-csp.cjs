@@ -26,7 +26,14 @@ const net = require('node:net');
     for (const tag of tags) assert.ok(tag.includes(`nonce="${nonce}"`), tag);
     const second = await fetch(url, { headers: { 'x-nonce': 'attacker-value' } });
     const nextPolicy = second.headers.get('content-security-policy');
-    assert.ok(!nextPolicy.includes(nonce) && !nextPolicy.includes('attacker-value'));
+    assert.ok(second.ok);
+    const nextNonce = nextPolicy.match(/'nonce-([^']+)'/)[1];
+    const nextHtml = await second.text();
+    const nextTags = [...nextHtml.matchAll(/<script\b[^>]*>/g)].map(match => match[0]);
+    assert.ok(nextTags.length > 1);
+    for (const tag of nextTags) assert.ok(tag.includes('nonce="' + nextNonce + '"'), tag);
+    assert.notEqual(nextNonce, nonce);
+    assert.notEqual(nextNonce, 'attacker-value');
     console.log('Production CSP: every script nonced, unique per request, no inline/eval bypass.');
   } finally { server.kill(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
