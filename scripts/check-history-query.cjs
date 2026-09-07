@@ -22,7 +22,7 @@ const route = load('src/app/api/events/route.ts', {
   'next/server': { NextResponse: { json: body => body } },
   '@/lib/records': load('src/lib/records.ts'),
   '@/lib/cache': { cache: { get: () => null, set: () => {} } },
-  '@/lib/mongodb': { default: Promise.resolve({ db: () => ({ collection: () => collection }) }) },
+  '@/lib/mongodb': { default: () => Promise.resolve({ db: () => ({ collection: () => collection }) }) },
 });
 route.GET().then(records => {
   assert.deepEqual(records.map(r => r._id), ['0','1','2','3','4']);

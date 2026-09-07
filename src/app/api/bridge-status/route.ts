@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { BridgeStatusRecord } from '@/types/bridge';
 import { getBridgeTrafficData } from '@/lib/traffic';
 import type { DirectionalStatus, OverallStatus } from '@/lib/traffic';
@@ -31,7 +31,7 @@ function jsonNoStore<T>(body: T, init?: ResponseInit) {
 }
 
 async function getBridgeCollection() {
-  const clientPromise = import('@/lib/mongodb').then((m) => m.default);
+  const clientPromise = import('@/lib/mongodb').then((m) => m.default());
   const client = await clientPromise;
   const db = client.db('paststatus');
   return db.collection<DbBridgeRecord>('bridgeevents');
@@ -113,13 +113,13 @@ async function refreshBridgeData() {
     const trafficData = await getBridgeTrafficData();
     const currentRecord = buildCurrentRecord(trafficData);
 
-    try {
-      await saveCurrentRecord(currentRecord);
-    } catch (dbError) {
-      console.error('MongoDB error during background refresh', {
-        message: dbError instanceof Error ? dbError.message : 'Unknown error'
-      });
-    }
+    after(async () => {
+      try {
+        await saveCurrentRecord(currentRecord);
+      } catch (error) {
+        console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    });
 
     const allRecords = [currentRecord];
     cache.set('bridge-status', makeCacheEntry(allRecords, trafficData), 600, 300);
@@ -166,13 +166,13 @@ export async function GET() {
     const trafficData = await getBridgeTrafficData();
     const currentRecord = buildCurrentRecord(trafficData);
 
-    try {
-      await saveCurrentRecord(currentRecord);
-    } catch (dbError) {
-      console.error('MongoDB error, using limited historical data', {
-        message: dbError instanceof Error ? dbError.message : 'Unknown error'
-      });
-    }
+    after(async () => {
+      try {
+        await saveCurrentRecord(currentRecord);
+      } catch (error) {
+        console.error('Bridge history write failed', { message: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    });
 
     const allRecords = [currentRecord];
     const cacheEntry = makeCacheEntry(allRecords, trafficData);

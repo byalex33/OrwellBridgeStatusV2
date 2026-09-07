@@ -28,7 +28,7 @@ export async function GET() {
 
     let events: BridgeStatusRecord[] = [];
     try {
-      const clientPromise = import('@/lib/mongodb').then(m => m.default);
+      const clientPromise = import('@/lib/mongodb').then(m => m.default());
       const client = await clientPromise;
 
       const db = client.db('paststatus');
