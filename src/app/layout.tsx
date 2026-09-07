@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://orwellbridgestatus.vercel.app'),
+  metadataBase: new URL('https://www.orwellbridgestatus.com'),
   title: {
     default: "Orwell Bridge Status - Live A14 Traffic Monitor",
     template: "%s | Orwell Bridge Status"
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_GB",
-    url: "https://orwellbridgestatus.vercel.app",
+    url: "https://www.orwellbridgestatus.com",
     siteName: "Orwell Bridge Status",
     title: "Orwell Bridge Status - Live A14 Traffic Monitor",
     description: "Real-time monitoring of Orwell Bridge (A14) traffic conditions, weather alerts, lane closures and delays. Essential for Suffolk commuters.",
@@ -77,7 +77,7 @@ export const metadata: Metadata = {
     creator: "@OrwellBridgeStatus",
   },
   alternates: {
-    canonical: "https://orwellbridgestatus.vercel.app",
+    canonical: "https://www.orwellbridgestatus.com",
   },
   icons: {
     icon: "/logo.png",
