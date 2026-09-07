@@ -23,7 +23,7 @@ Copy `.env.example` to `.env.local`, fill in the available server-side credentia
 | `TOMTOM_API_KEY` | TomTom Traffic Flow API; requests speeds in mph. |
 | `HERE_API_KEY` | Optional HERE Traffic API directional evidence. |
 | `NATIONAL_HIGHWAYS_API_KEY` | Optional National Highways incident feed key. |
-| `MONGODB_URI` | MongoDB connection for recorded events and historical fallback. |
+| `MONGODB_URI` | MongoDB Atlas or replica-set connection for recorded events and historical fallback. |
 
 At least one usable traffic provider is needed for live traffic. Providers can fail independently; history is optional for live observations. A missing database makes event history unavailable. Configure only keys supported by the implementation; do not substitute unrelated API product keys.
 
@@ -31,8 +31,8 @@ At least one usable traffic provider is needed for live traffic. Providers can f
 
 - `GET /api/bridge-status`: latest traffic observation and freshness/source metadata. Historical fallback is not a current directional observation.
 - `GET /api/events`: recorded events; failures are distinguished from an empty result.
-- `GET /api/weather`: nearby Open-Meteo model estimate, including its observation time. Mean wind is not a bridge gust measurement or an official restriction notice.
-- In-memory caches deduplicate requests within one running instance. Separate serverless instances do not share a cache.
+- `GET /api/weather`: Open-Meteo model estimate. Mean wind is not a bridge gust measurement or an official restriction notice.
+- Caches live in memory within one running instance. Separate serverless instances do not share a cache.
 - Legacy history may have no speed unit or reliable direction; do not infer missing metadata.
 
 ```sh
@@ -41,12 +41,10 @@ npx tsc --noEmit
 npm run build
 ```
 
-Run the regression scripts in `scripts/check-*.cjs` with Node after the build. The CSP regression starts its own short-lived local production server. GitHub Actions runs the release checks; the health workflow checks the public traffic endpoint every 15 minutes and can be run manually. Health failures appear as failed Actions runs. The repository operator must enable Actions failure notifications; delivery to a particular person is not configured or verified by this repository.
+Run the regression scripts in `scripts/check-*.cjs` with Node after the build. Configure an operational monitor and its notification recipient before relying on automated availability alerts. No alert recipient is configured by the credential template.
 
 ## Deployment
 
-Use the existing Vercel project linked above. Check the project name and connected repository before importing or linking a checkout: a local `.vercel` directory can refer to a different project. Put server credentials in that project's environment settings with the intended Production/Preview scope. Pull requests create previews; merging to `master` deploys production through the existing GitHub integration.
-
-Production pages render per request to give scripts a fresh CSP nonce. Keep the middleware and layout nonce handling together; caching nonce-bearing HTML independently can break script execution. API data caching remains separate.
+Use the existing Vercel project linked above. Check the project name and connected repository before importing or linking a checkout: a local `.vercel` directory can refer to a different project. Put server credentials in that project's environment settings with the intended Production/Preview scope. When deployment is enabled, pull requests create previews and merging to `master` deploys production through the GitHub integration. Respect paused deployments; canceled or missing deployment checks do not prove that a release passed.
 
 Open issues and pull requests in the repository linked above. Traffic evidence is provided by configured TomTom, HERE and National Highways integrations; weather estimates come from Open-Meteo.
