@@ -1,183 +1,52 @@
-# Orwell Bridge Status Monitor
+# Orwell Bridge Status
 
-A real-time monitoring dashboard for the Orwell Bridge (A14) providing live traffic status, weather conditions, and historical events. This project helps commuters and logistics companies stay informed about bridge conditions and potential delays.
+Independent traffic dashboard for the A14 Orwell Bridge near Ipswich. This is an unofficial service: check [National Highways](https://www.trafficengland.com/) before travelling. Missing or old observations are not evidence that a road is open.
 
-## 🌉 About the Orwell Bridge
+- Live site: https://www.orwellbridgestatus.com/
+- Repository: https://github.com/byalex33/OrwellBridgeStatusV2
+- Existing Vercel project: https://vercel.com/byalex34/orwell-bridge-status-v2
 
-The Orwell Bridge is a major cable-stayed bridge on the A14 in Suffolk, England, carrying traffic over the River Orwell. Due to its height and exposure, the bridge is frequently subject to closures during high winds, making real-time status monitoring essential for local traffic management.
+## Local setup
 
-## ✨ Features
+Use Node.js 22 LTS and npm. The app uses Next.js 15, React 19, TypeScript and Tailwind CSS.
 
-- **Real-Time Traffic Status**: Live bridge status using TomTom Traffic API
-- **Weather Monitoring**: Current weather conditions from Open-Meteo API
-- **Historical Events**: Track past closures and delays with MongoDB storage
-- **Responsive Dashboard**: Clean, mobile-friendly interface
-- **High-Traffic Optimization**: Advanced caching with stale-while-revalidate pattern
-- **Status Indicators**: Visual traffic light system (Open/Delayed/Closed)
-- **Direction-Specific Data**: Separate monitoring for eastbound and westbound lanes
-
-## 🚀 Live Demo
-
-Visit the live application: [Orwell Bridge Status](https://your-deployment-url.com)
-
-## 🛠️ Technology Stack
-
-- **Frontend**: Next.js 15, React 19, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui components
-- **APIs**: TomTom Traffic API, Open-Meteo Weather API
-- **Database**: MongoDB Atlas
-- **Caching**: Custom in-memory cache with request deduplication
-- **Deployment**: Vercel (recommended)
-
-## 📋 Prerequisites
-
-- Node.js 18+ and npm
-- MongoDB Atlas account
-- TomTom API key
-- Open-Meteo API access (free)
-
-## ⚙️ Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-# Required API Keys
-TOMTOM_API_KEY=your_tomtom_api_key_here
-WEATHER_API_KEY=your_openmeteo_key_here
-
-# MongoDB Connection
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
-
-# Optional: For development
-NODE_ENV=development
+```sh
+git clone https://github.com/byalex33/OrwellBridgeStatusV2.git
+cd OrwellBridgeStatusV2
+npm ci
 ```
 
-## 🚀 Getting Started
+Copy `.env.example` to `.env.local`, fill in the available server-side credentials, then run `npm run dev` and open http://localhost:3000. Never commit `.env.local` or put keys in `NEXT_PUBLIC_` variables. Open-Meteo requires no key for the endpoint used here; `WEATHER_API_KEY` is not read.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/developedbyalex/OrwellBridgeStatusV2.git
-   cd OrwellBridgeStatusV2
-   ```
+| Variable | Purpose |
+| --- | --- |
+| `TOMTOM_API_KEY` | TomTom Traffic Flow API; requests speeds in mph. |
+| `HERE_API_KEY` | Optional HERE Traffic API directional evidence. |
+| `NATIONAL_HIGHWAYS_API_KEY` | Optional National Highways incident feed key. |
+| `MONGODB_URI` | MongoDB connection for recorded events and historical fallback. |
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+At least one usable traffic provider is needed for live traffic. Providers can fail independently; history is optional for live observations. A missing database makes event history unavailable. Configure only keys supported by the implementation; do not substitute unrelated API product keys.
 
-3. **Set up environment variables**
-   - Copy `.env.example` to `.env.local`
-   - Fill in your API keys and MongoDB connection string
+## Behaviour and validation
 
-4. **Run the development server**
-   ```bash
-   npm run dev
-   ```
+- `GET /api/bridge-status`: latest traffic observation and freshness/source metadata. Historical fallback is not a current directional observation.
+- `GET /api/events`: recorded events; failures are distinguished from an empty result.
+- `GET /api/weather`: nearby Open-Meteo model estimate, including its observation time. Mean wind is not a bridge gust measurement or an official restriction notice.
+- In-memory caches deduplicate requests within one running instance. Separate serverless instances do not share a cache.
+- Legacy history may have no speed unit or reliable direction; do not infer missing metadata.
 
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-## 📁 Project Structure
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── bridge-status/    # Main bridge status endpoint
-│   │   ├── events/           # Historical events API
-│   │   └── weather/          # Weather data API
-│   ├── globals.css           # Global styles
-│   ├── layout.tsx           # App layout
-│   └── page.tsx             # Main dashboard
-├── components/
-│   └── ui/                   # Reusable UI components
-├── lib/
-│   ├── cache.ts             # Caching system
-│   ├── mongodb.ts           # Database connection
-│   ├── traffic.ts           # Traffic data processing
-│   ├── weather.ts           # Weather API integration
-│   └── utils.ts             # Utility functions
-└── types/
-    └── bridge.ts            # TypeScript definitions
+```sh
+npm run lint
+npx tsc --noEmit
+npm run build
 ```
 
-## 🔧 API Endpoints
+Run the regression scripts in `scripts/check-*.cjs` with Node after the build. The CSP regression starts its own short-lived local production server. GitHub Actions runs the release checks; the health workflow checks the public traffic endpoint every 15 minutes and can be run manually. Health failures appear as failed Actions runs. The repository operator must enable Actions failure notifications; delivery to a particular person is not configured or verified by this repository.
 
-### Bridge Status
-- `GET /api/bridge-status` - Current bridge status and traffic data
-- Returns real-time status for both directions with historical context
+## Deployment
 
-### Events
-- `GET /api/events` - Recent bridge closure and delay events
-- Filtered for significant events (closures/delays only)
+Use the existing Vercel project linked above. Check the project name and connected repository before importing or linking a checkout: a local `.vercel` directory can refer to a different project. Put server credentials in that project's environment settings with the intended Production/Preview scope. Pull requests create previews; merging to `master` deploys production through the existing GitHub integration.
 
-### Weather
-- `GET /api/weather` - Current weather conditions
-- Includes temperature, wind speed, and conditions
+Production pages render per request to give scripts a fresh CSP nonce. Keep the middleware and layout nonce handling together; caching nonce-bearing HTML independently can break script execution. API data caching remains separate.
 
-## 🎯 Caching Strategy
-
-The application implements intelligent caching to handle high traffic:
-
-- **Bridge Status**: 10-minute TTL, 5-minute stale time
-- **Weather Data**: 15-minute TTL
-- **Events**: 10-minute TTL
-- **Stale-While-Revalidate**: Serves stale data while refreshing in background
-- **Request Deduplication**: Prevents API spam during traffic spikes
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-1. **Connect to Vercel**
-   ```bash
-   npm install -g vercel
-   vercel
-   ```
-
-2. **Add environment variables** in Vercel dashboard
-3. **Deploy** - Automatic deployments on git push
-
-### Other Platforms
-
-The application can be deployed on any Node.js hosting platform:
-- Netlify
-- Railway
-- DigitalOcean App Platform
-- AWS Amplify
-
-## 🔍 Monitoring & Analytics
-
-- Built-in error handling and fallback mechanisms
-- Console logging for debugging and monitoring
-- Graceful degradation when APIs are unavailable
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- TomTom for traffic data API
-- Open-Meteo for weather data
-- Highways England for bridge specifications
-- The open-source community for excellent tools and libraries
-
-## 📞 Support
-
-For issues and questions:
-- Open an issue on GitHub
-- Check the documentation
-- Review existing issues for solutions
-
----
-
-**Note**: This is an unofficial monitoring tool. For official bridge status and travel information, please refer to Highways England and local traffic authorities.
+Open issues and pull requests in the repository linked above. Traffic evidence is provided by configured TomTom, HERE and National Highways integrations; weather estimates come from Open-Meteo.
