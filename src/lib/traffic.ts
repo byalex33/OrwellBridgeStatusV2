@@ -1,20 +1,14 @@
+import { getHereTrafficData } from './here';
+import { getNationalHighwaysData } from './national-highways';
+import { consensusDirection } from './consensus';
 import axios from 'axios';
 
-const BRIDGE_POINTS = {
-  eastbound: {
-    point: "52.0449,1.1700",
-    description: "A14 Eastbound (Ipswich to Felixstowe)"
-  },
-  westbound: {
-    point: "52.0452,1.1735",
-    description: "A14 Westbound (Felixstowe to Ipswich)"
-  }
-};
+import { BRIDGE_POINTS } from './bridge';
 
 export interface TrafficData {
   status: 'OPEN' | 'DELAYED' | 'CLOSED' | 'UNKNOWN';
   details: string;
-  averageSpeed: number;
+  averageSpeed: number | null;
   description: string;
 }
 
@@ -58,19 +52,22 @@ function analyzeBridgeStatus(trafficData: unknown): Omit<TrafficData, 'descripti
       return {
         status: 'UNKNOWN',
         details: 'No traffic data available',
-        averageSpeed: 0
+        averageSpeed: null
       };
     }
 
     const segment = (trafficData as TomTomResponse).flowSegmentData;
     let status: 'OPEN' | 'DELAYED' | 'CLOSED' | 'UNKNOWN';
     let details: string;
-    const averageSpeed = segment.currentSpeed || 0;
-    const freeFlowSpeed = segment.freeFlowSpeed || 70;
+    const averageSpeed = segment.currentSpeed;
+    const freeFlowSpeed = segment.freeFlowSpeed;
 
-    if (segment.roadClosure || averageSpeed === 0) {
+    if (segment.roadClosure === true) {
       status = 'CLOSED';
       details = 'Bridge is currently closed to traffic';
+    } else if (typeof averageSpeed !== 'number' || !Number.isFinite(averageSpeed) || averageSpeed < 0 ||
+      typeof freeFlowSpeed !== 'number' || !Number.isFinite(freeFlowSpeed) || freeFlowSpeed <= 0) {
+      return { status: 'UNKNOWN', details: 'TomTom speed data unavailable', averageSpeed: null };
     } else if (averageSpeed < freeFlowSpeed * 0.3) {
       status = 'DELAYED';
       details = 'Bridge is open but experiencing significant delays';
@@ -82,7 +79,7 @@ function analyzeBridgeStatus(trafficData: unknown): Omit<TrafficData, 'descripti
     return {
       status,
       details,
-      averageSpeed
+      averageSpeed: typeof averageSpeed === 'number' && Number.isFinite(averageSpeed) && averageSpeed >= 0 ? averageSpeed : null
     };
   } catch (error) {
     console.error('Error analyzing bridge status', {
@@ -91,7 +88,7 @@ function analyzeBridgeStatus(trafficData: unknown): Omit<TrafficData, 'descripti
     return {
       status: 'UNKNOWN',
       details: 'Unable to determine bridge status',
-      averageSpeed: 0
+      averageSpeed: null
     };
   }
 }
@@ -127,11 +124,7 @@ function determineOverallStatus(directionalStatus: DirectionalStatus): OverallSt
   };
 }
 
-export async function getBridgeTrafficData(): Promise<{
-  directions: DirectionalStatus;
-  overallStatus: OverallStatus;
-  timestamp: Date;
-}> {
+async function fetchTomTomData(): Promise<DirectionalStatus> {
   if (!process.env.TOMTOM_API_KEY) {
     throw new TrafficDataUnavailableError('Missing TOMTOM_API_KEY environment variable');
   }
@@ -165,7 +158,7 @@ export async function getBridgeTrafficData(): Promise<{
 
       directionalStatus[direction] = {
         ...analyzeBridgeStatus(trafficResponse.data),
-        description: BRIDGE_POINTS[direction].description
+        description: `${BRIDGE_POINTS[direction].description} (TomTom)`
       };
     } catch (error) {
       console.error(`Error fetching traffic data for ${direction}`, {
@@ -175,8 +168,8 @@ export async function getBridgeTrafficData(): Promise<{
       directionalStatus[direction] = {
         status: 'UNKNOWN',
         details: `Unable to fetch traffic data for ${direction} direction`,
-        averageSpeed: 0,
-        description: BRIDGE_POINTS[direction].description
+        averageSpeed: null,
+        description: `${BRIDGE_POINTS[direction].description} (TomTom)`
       };
     }
   }
@@ -185,12 +178,28 @@ export async function getBridgeTrafficData(): Promise<{
     throw new TrafficDataUnavailableError('Unable to fetch TomTom traffic data for either direction');
   }
 
-  const overallStatus = determineOverallStatus(directionalStatus);
-
-  return {
-    directions: directionalStatus,
-    overallStatus,
-    timestamp: new Date()
-  };
+  return directionalStatus;
 }
+
+
+
+
+export async function getBridgeTrafficData() {
+  const results = await Promise.allSettled([
+    process.env.TOMTOM_API_KEY ? fetchTomTomData() : Promise.resolve(null),
+    process.env.HERE_API_KEY ? getHereTrafficData() : Promise.resolve(null),
+    process.env.NATIONAL_HIGHWAYS_API_KEY ? getNationalHighwaysData() : Promise.resolve(null),
+  ]);
+  const sources = results.map(result => result.status === 'fulfilled' ? result.value : null);
+  const directions = {
+    eastbound: consensusDirection(...sources.map(source => source?.eastbound ?? null)),
+    westbound: consensusDirection(...sources.map(source => source?.westbound ?? null)),
+  };
+  if (directions.eastbound.status === 'UNKNOWN' && directions.westbound.status === 'UNKNOWN') {
+    throw new TrafficDataUnavailableError('All configured traffic sources are unavailable');
+  }
+  return { directions, overallStatus: determineOverallStatus(directions), timestamp: new Date() };
+}
+
+
 
