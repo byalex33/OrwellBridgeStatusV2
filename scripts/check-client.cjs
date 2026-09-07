@@ -34,6 +34,10 @@ const tick = () => new Promise(setImmediate);
   assert.equal(page.state[0].freshness,'stale');
   assert.doesNotMatch(page.render(), /undefined mph/);
   page.cleanup();
-  console.log('F14: independent panel updates, pending-request overlap guard passed');
+  for (const direction of ['eastbound','westbound','both']) {
+    const fallback=dashboard(async path=>response(path.includes('bridge-status') ? {success:true,fallback:true,data:[{status:'CLOSED',direction,timestamp:'2020-01-01T12:00:00Z'}]} : path.includes('events') ? [] : {}));
+    await tick();assert.equal(fallback.state[0].eastbound,'unknown');assert.equal(fallback.state[0].westbound,'unknown');assert.equal(fallback.state[3],null);fallback.cleanup();
+  }
+  console.log('F08/F09/F14: independent panel updates, pending-request overlap guard passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
 module.exports={dashboard,response,tick};

@@ -92,7 +92,7 @@ export default function Home() {
             : "cached";
 
           const age = apiTimestamp ? Date.now() - new Date(apiTimestamp).getTime() : NaN;
-          if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 600000 || age < -60000 || bridgeResult.stale)) {
+          if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 600000 || age < -60000 || bridgeResult.stale || bridgeResult.fallback)) {
             setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: "stale" }));
             setTrafficData(null);
           } else if (bridgeResult.trafficData) {
@@ -107,17 +107,10 @@ export default function Home() {
               freshness,
             }));
             setTrafficData(directions);
-          } else if (bridgeResult.data.length > 0) {
-            const latest = bridgeResult.data[0];
-            const currentStatus = latest.status.toLowerCase() as LaneStatus;
-            setBridgeStatus((prev) => ({
-              ...prev,
-              eastbound: currentStatus,
-              westbound: currentStatus,
-              lastUpdated,
-              isRealTime: false,
-              freshness,
-            }));
+          } else {
+            // A historical event cannot establish current directional observations.
+            setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: "fallback" }));
+            setTrafficData(null);
           }
         } else {
           setBridgeStatus((prev) => ({
