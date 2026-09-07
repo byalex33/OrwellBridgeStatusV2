@@ -43,6 +43,7 @@ export interface BridgeStatusResponse {
 export interface WeatherResponse {
   success: boolean;
   data: {
+    timestamp: string;
     temperature: number;
     windSpeed: number;
     windDirection: number;

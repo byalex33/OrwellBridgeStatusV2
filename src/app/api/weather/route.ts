@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getWeatherData } from '@/lib/weather';
+import { getWeatherData, type WeatherData } from '@/lib/weather';
 import { cache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ function jsonNoStore<T>(body: T, init?: ResponseInit) {
 
 export async function GET() {
   try {
-    const cachedWeather = cache.get<{temperature: number, windSpeed: number, windDirection: number, description: string, icon: string}>('weather-data');
+    const cachedWeather = cache.get<WeatherData>('weather-data');
     if (cachedWeather) {
       return jsonNoStore({
         success: true,
@@ -52,7 +52,7 @@ export async function GET() {
       message: error instanceof Error ? error.message : 'Unknown error'
     });
 
-    const cachedWeather = cache.get<{temperature: number, windSpeed: number, windDirection: number, description: string, icon: string}>('weather-data');
+    const cachedWeather = cache.get<WeatherData>('weather-data');
     if (cachedWeather) {
       return jsonNoStore({
         success: true,

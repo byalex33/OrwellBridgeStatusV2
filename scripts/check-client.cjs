@@ -7,7 +7,7 @@ const { renderToStaticMarkup } = require('react-dom/server');
 function dashboard(fetch) {
   let state = [], cursor = 0, effects = [], intervals = [], cleanups;
   const exports = {};
-  const react = { ...React, useState(initial) { const i=cursor++; if (!(i in state)) state[i]=initial; return [state[i], v => { state[i]=typeof v==='function'?v(state[i]):v; }]; }, useEffect(fn) { effects.push(fn); } };
+  const react = { ...React, useState(initial) { const i=cursor++; if (!(i in state)) state[i]=typeof initial==='function'?initial():initial; return [state[i], v => { state[i]=typeof v==='function'?v(state[i]):v; }]; }, useEffect(fn) { effects.push(fn); } };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/page.tsx','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true, target: ts.ScriptTarget.ES2022 } }).outputText, { exports, require: n => n==='react'?react:require(n), fetch, AbortController, AbortSignal, Date, console, document: { visibilityState: "visible", addEventListener(){}, removeEventListener(){} }, window: { addEventListener(){}, removeEventListener(){} }, setInterval: fn => { intervals.push(fn); return intervals.length; }, clearInterval(){} });
   const render=()=>{cursor=0;return renderToStaticMarkup(exports.default());};
   render();cleanups=effects.map(fn=>fn());
@@ -49,6 +49,9 @@ const tick = () => new Promise(setImmediate);
   for (const [direction, expected] of [['eastbound','Bridge closed eastbound'],['westbound','Bridge closed westbound'],['both','Bridge closed in both directions'],['north','Bridge closed in at least one direction']]) {
     const legacy=dashboard(async path=>response(path.includes('events')?[{_id:'legacy',status:'CLOSED',direction,description:'Bridge closed in at least one direction',timestamp:new Date().toISOString()}]:{}));await tick();assert.ok(legacy.render().includes(expected));legacy.cleanup();
   }
+  const freshWeather=dashboard(async path=>response(path.includes('weather')?{success:true,data:{timestamp:new Date().toISOString(),temperature:12,windSpeed:10,windDirection:0,description:'Clear'}}:path.includes('events')?[]:{}));await tick();
+  assert.match(freshWeather.render(),/Nearby Open-Meteo model estimate/);assert.doesNotMatch(freshWeather.render(),/outdated/);
+  freshWeather.state[1].timestamp='2020-01-01T00:00:00Z';freshWeather.age();assert.match(freshWeather.render(),/outdated/);assert.match(freshWeather.render(),/Weather unavailable/);freshWeather.cleanup();
   console.log('F08/F09/F10/F14/F16: independent panel updates, pending-request overlap guard passed');
   console.log('F08/F09/F10/F14: independent panel updates, pending-request overlap guard passed');
   console.log('F08/F09/F14: independent panel updates, pending-request overlap guard passed');

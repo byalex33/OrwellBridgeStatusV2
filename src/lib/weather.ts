@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 export interface WeatherData {
+  timestamp: string;
   temperature: number;
   windSpeed: number;
   windDirection: number;
@@ -73,10 +74,11 @@ export async function getWeatherData(): Promise<WeatherData> {
     'https://api.open-meteo.com/v1/forecast',
     {
       params: {
-        latitude: 52.0450,
-        longitude: 1.1717,
+        latitude: 52.0270,
+        longitude: 1.1660,
         current: 'temperature_2m,wind_speed_10m,wind_direction_10m,weather_code',
-        wind_speed_unit: 'mph'
+        wind_speed_unit: 'mph',
+        timeformat: 'unixtime'
       },
       timeout: 5000
     }
@@ -88,7 +90,12 @@ export async function getWeatherData(): Promise<WeatherData> {
     throw new Error('Open-Meteo response did not include current weather data');
   }
 
+  const timestamp = new Date(current.time * 1000);
+  const age = Date.now() - timestamp.getTime();
+  if (typeof current.time !== 'number' || !Number.isFinite(age) || age < -60000 || age > 1800000) throw new Error('Weather model time unavailable or stale');
+
   return {
+    timestamp: timestamp.toISOString(),
     temperature: Math.round(current.temperature_2m),
     windSpeed: Math.round(current.wind_speed_10m),
     windDirection: current.wind_direction_10m,
