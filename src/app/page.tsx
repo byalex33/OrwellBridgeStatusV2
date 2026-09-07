@@ -53,6 +53,8 @@ export default function Home() {
   const [trafficData, setTrafficData] = useState<TrafficDirections | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
+  const [eventsError, setEventsError] = useState(false);
+  const [eventsUpdatedAt, setEventsUpdatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -135,10 +137,12 @@ export default function Home() {
           if (!controller.signal.aborted) setWeatherLoading(false);
         }),
         request("/api/events").then(({ response, result }) => {
-          if (response.ok && Array.isArray(result)) setPastEvents(result);
-          else setPastEvents([]);
+          if (!response.ok || !Array.isArray(result)) throw new Error("History unavailable");
+          setPastEvents(result);
+          setEventsError(false);
+          setEventsUpdatedAt(new Date().toISOString());
         }).catch(() => {
-          if (!controller.signal.aborted) setPastEvents([]);
+          if (!controller.signal.aborted) setEventsError(true);
         }).finally(() => {
           if (!controller.signal.aborted) setEventsLoading(false);
         }),
@@ -394,12 +398,13 @@ export default function Home() {
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
             Past Events
           </h2>
+          {eventsError && <p className="text-sm text-amber-200 mb-3">History unavailable.{eventsUpdatedAt ? ` Showing last loaded events from ${new Date(eventsUpdatedAt).toLocaleString("en-GB", { timeZone: "Europe/London" })}.` : " Please try again."} <button type="button" className="underline" onClick={() => setRefresh(value => value + 1)}>Retry history</button></p>}
           {eventsLoading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground text-sm rounded-xl border border-border/50">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading events...
             </div>
-          ) : pastEvents.length === 0 ? (
+          ) : pastEvents.length === 0 && eventsError ? null : pastEvents.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground text-sm rounded-xl border border-border/50">
               No recent events found
             </div>
