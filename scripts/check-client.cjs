@@ -4,11 +4,13 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
+const tickerExports = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/NumberTicker.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, { exports: tickerExports, require });
 function dashboard(fetch) {
   let state = [], cursor = 0, effects = [], effectCursor = 0, intervals = [], tree;
   const exports = {};
   const react = { ...React, useState(initial) { const i=cursor++; if (!(i in state)) state[i]=typeof initial==='function'?initial():initial; return [state[i], v => { state[i]=typeof v==='function'?v(state[i]):v; }]; }, useEffect(fn, deps) { const i=effectCursor++; const prev=effects[i]; if(!prev || deps.some((value,index)=>value!==prev.deps[index])) effects[i]={fn,deps,cleanup:prev?.cleanup,pending:true}; } };
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/page.tsx','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true, target: ts.ScriptTarget.ES2022 } }).outputText, { exports, require: n => n==='react'?react:n==='@/components/InstallApp'?()=>null:require(n), fetch, AbortController, AbortSignal, Date, console, document: { visibilityState: "visible", addEventListener(){}, removeEventListener(){} }, window: { addEventListener(){}, removeEventListener(){} }, setInterval: fn => { intervals.push(fn); return intervals.length; }, clearInterval(){} });
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/page.tsx','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true, target: ts.ScriptTarget.ES2022 } }).outputText, { exports, require: n => n==='react'?react:n==='@/components/InstallApp'||n==='@/components/ThemeToggle'||n==='@/components/ClosureAlerts'?()=>null:n==='@/components/NumberTicker'?tickerExports:require(n), fetch, AbortController, AbortSignal, Date, console, document: { visibilityState: "visible", addEventListener(){}, removeEventListener(){} }, window: { addEventListener(){}, removeEventListener(){} }, setInterval: fn => { intervals.push(fn); return intervals.length; }, clearInterval(){} });
   const render=()=>{cursor=0;effectCursor=0;tree=exports.default();const html=renderToStaticMarkup(tree);for(const effect of effects){if(effect.pending){effect.cleanup?.();effect.cleanup=effect.fn();effect.pending=false;}}return html;};
   const elements=node=>!node||typeof node!=='object'?[]:[node,...React.Children.toArray(node.props?.children).flatMap(elements)];
   const click=label=>{const button=elements(tree).find(node=>node.type==='button' && React.Children.toArray(node.props.children).includes(label));assert.ok(button,'button exists: '+label);button.props.onClick();render();};
@@ -28,8 +30,8 @@ const tick = () => new Promise(setImmediate);
   await tick();
   assert.equal(page.state[0].eastbound,'open');
   assert.equal(page.state[0].westbound,'closed');
-  assert.match(page.render(), /Check official National Highways bridge updates/);
-  assert.match(page.render(), /This independent site is not operated by National Highways/);
+  assert.doesNotMatch(page.render(), /Check official National Highways bridge updates|Refresh status/);
+  assert.match(page.render(), /href="https:\/\/alex.codes"[^>]*>Alex<\/a>/);
 
   assert.match(page.render(), /role="status"[^>]*>Eastbound Open\. Westbound Closed\./);
   assert.equal(page.state[5],false,'history finishes while weather hangs');
@@ -54,8 +56,8 @@ const tick = () => new Promise(setImmediate);
     const legacy=dashboard(async path=>response(path.includes('events')?[{_id:'legacy',status:'CLOSED',direction,description,timestamp:new Date().toISOString()}]:{}));await tick();assert.ok(legacy.render().includes(expected));legacy.cleanup();
   }
   const freshWeather=dashboard(async path=>response(path.includes('weather')?{success:true,data:{timestamp:new Date().toISOString(),temperature:12,windSpeed:10,windDirection:0,description:'Clear'}}:path.includes('events')?[]:{}));await tick();
-  assert.match(freshWeather.render(),/Nearby Open-Meteo model estimate/);assert.doesNotMatch(freshWeather.render(),/outdated/);
-  freshWeather.state[1].timestamp='2020-01-01T00:00:00Z';freshWeather.age();assert.match(freshWeather.render(),/outdated/);assert.match(freshWeather.render(),/Weather unavailable/);freshWeather.cleanup();
+  assert.doesNotMatch(freshWeather.render(),/Nearby Open-Meteo model estimate|Model time|Wind is a mean/);assert.match(freshWeather.render(),/data-slot="number-ticker"/);
+  freshWeather.state[1].timestamp='2020-01-01T00:00:00Z';freshWeather.age();assert.match(freshWeather.render(),/Weather unavailable/);freshWeather.cleanup();
   assert.match(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);assert.doesNotMatch(history.render(),/No recent events found/);
   eventsFail=false;history.click('Retry history');await tick();assert.equal(historyRequests,3);assert.doesNotMatch(history.render(),/History unavailable/);assert.match(history.render(),/Recorded closure/);history.cleanup();
   const rejected=dashboard(async()=>{throw Error('offline')});await tick();assert.equal(rejected.state[0].lastUpdated,'Unavailable');assert.equal(rejected.state[0].freshness,'error');rejected.cleanup();

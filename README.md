@@ -56,6 +56,18 @@ The Next.js manifest supplies the name and 192/512px icons. The service worker r
 
 Run `node scripts/check-pwa.cjs` for manifest, icon and worker checks. After deployment, install on a real phone and reopen in airplane mode to verify the offline screen.
 
+### Closure notifications
+
+Closure alerts use standards-based Web Push. Android users can opt in from a supported browser such as Chrome. iPhone/iPad users need iOS/iPadOS 16.4 or later and must open the installed Home Screen app. The Enable button requests permission; Turn off disables the server subscription and unsubscribes the device. Installation alone never opts someone in.
+
+Production needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `MONGODB_URI`, and `PUSH_SCHEDULE_ENABLED=true`. Keep the private key and cron secret server-only. `vercel.json` schedules `/api/push/check` every minute on the existing Pro plan. Vercel supplies the cron bearer token from `CRON_SECRET`. Preview/local environments stay disabled unless explicitly configured. Changing the VAPID key requires devices to subscribe again.
+
+The checker fetches providers independently of open pages, establishes an initial baseline without broadcasting an existing closure, and sends on a later confirmed transition to CLOSED in either direction. Unknown readings do not create alerts or reset the last confirmed state. MongoDB stores subscriptions and the monitor's lease, state, pending closures and accepted-send counts in `paststatus`. Expired subscriptions are disabled. Retries expire after ten minutes and stop when a confirmed reopening is observed. Each message has a five-minute push-service TTL. A fixed event tag replaces duplicate notifications after ambiguous send failures; exactly-once external delivery cannot be guaranteed. The checker processes up to 100 subscriptions per event within a 45-second budget; a durable queue is needed if volume exceeds this capacity.
+
+`pushAccepted` and `lastAcceptedAt` record push-service acceptance, not delivery to a phone. `pushMonitor.lastRun` records accepted, expired and failed counts; `checkedAt`/`lastRunAt` show scheduler activity. Notification opens record `notification_clicked` in Tracwell on the destination page, under the existing private/DNT policy. The current Private-mode integration cannot attribute server send events: Tracwell requires Product mode, a server key and browser session identity. No identities are invented and no subscription endpoints/keys are sent to analytics.
+
+Run `node scripts/check-push.cjs` and `node scripts/check-push-client.cjs` for isolated API, sender, consent and worker checks. Verify production cron activity and perform device acceptance tests on an explicitly opted-in test Android and iPhone before relying on alerts. Push timing also depends on provider observations, scheduler timing, connectivity and device notification settings.
+
 ### Browser analytics
 
 Tracwell runs once from the root layout in production alongside Vercel Analytics and Speed Insights. It uses the public project key in `src/components/TracwellAnalytics.tsx`, private collection, granted consent and Do Not Track protection. No environment variables are needed. Private mode does not persist browser identity. The app has no sign-in or analytics consent flow.

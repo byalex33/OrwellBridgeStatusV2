@@ -14,6 +14,12 @@ export default function TracwellAnalytics() {
       consent: "granted",
       respectDoNotTrack: true,
     });
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("notification") === "bridge-closure") {
+      analytics.track("notification_clicked", { type: "bridge_closure" });
+      url.searchParams.delete("notification");
+      window.history.replaceState(window.history.state, "", url);
+    }
   }, []);
 
   return null;

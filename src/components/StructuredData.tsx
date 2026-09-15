@@ -93,6 +93,8 @@ export default function StructuredData({ nonce }: { nonce?: string }) {
     <script
       type="application/ld+json"
       nonce={nonce}
+      // Browsers hide the nonce attribute before hydration to prevent its extraction.
+      suppressHydrationWarning
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
   );

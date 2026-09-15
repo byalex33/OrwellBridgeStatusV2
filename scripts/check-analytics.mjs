@@ -8,17 +8,20 @@ const output = ts.transpileModule(fs.readFileSync('src/components/TracwellAnalyt
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText;
 
-function mount(environment, browser) {
+function mount(environment, browser, notification = false) {
   const effects = [];
   const configs = [];
+  const clicks = [];
+  const location = { href: 'https://www.orwellbridgestatus.com/' + (notification ? '?notification=bridge-closure' : '') };
   const context = {
     exports: {},
     process: { env: { NODE_ENV: environment } },
-    ...(browser ? { document: {} } : {}),
+    URL,
+    ...(browser ? { document: {}, window: { location, history: { state: null, replaceState: (_state, _title, url) => { location.href = String(url); } } } } : {}),
     require(name) {
       if (name === 'react') return { useEffect: effect => effects.push(effect) };
       assert.equal(name, 'tracwell');
-      return { createTracwell: config => { configs.push(config); return {}; } };
+      return { createTracwell: config => { configs.push(config); return { track: (...args) => clicks.push(args) }; } };
     },
   };
   vm.runInNewContext(output, context);
@@ -28,12 +31,15 @@ function mount(environment, browser) {
   effects[0](); // Strict Mode effect replay.
   context.exports.default();
   effects[1](); // Remounts must reuse the client.
+  assert.equal(clicks.length, environment === 'production' && browser && notification ? 1 : 0);
+  if (clicks.length) assert.equal(clicks[0][0], 'notification_clicked');
   return configs;
 }
 
 assert.equal(mount('development', true).length, 0);
 assert.equal(mount('production', false).length, 0);
 const configs = mount('production', true);
+mount('production', true, true);
 assert.equal(configs.length, 1);
 assert.deepEqual(JSON.parse(JSON.stringify(configs[0])), {
   projectKey: 'tw_live_a3d8db4110f747f6ac554dfa91ae71b6',

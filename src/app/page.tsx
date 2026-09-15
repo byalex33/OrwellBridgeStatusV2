@@ -1,6 +1,9 @@
 "use client";
 
 import InstallApp from '@/components/InstallApp';
+import NumberTicker from '@/components/NumberTicker';
+import ThemeToggle from '@/components/ThemeToggle';
+import ClosureAlerts from '@/components/ClosureAlerts';
 
 import {
   Thermometer, Wind, ArrowUp, AlertTriangle, Gauge, Heart, Coffee,
@@ -182,19 +185,10 @@ export default function Home() {
 
   const getStatusColor = (status: LaneStatus) => {
     switch (status) {
-      case "open": return "text-emerald-400";
-      case "delayed": return "text-amber-400";
-      case "closed": return "text-rose-400";
-      default: return "text-zinc-500";
-    }
-  };
-
-  const getStatusBorder = (status: LaneStatus) => {
-    switch (status) {
-      case "open": return "border-emerald-500/25 bg-emerald-500/5";
-      case "delayed": return "border-amber-500/25 bg-amber-500/5";
-      case "closed": return "border-rose-500/25 bg-rose-500/5";
-      default: return "border-border/60 bg-card";
+      case "open": return "text-emerald-700 dark:text-emerald-400";
+      case "delayed": return "text-amber-700 dark:text-amber-400";
+      case "closed": return "text-rose-700 dark:text-rose-400";
+      default: return "text-muted-foreground";
     }
   };
 
@@ -263,16 +257,17 @@ export default function Home() {
 
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-base font-semibold text-foreground tracking-tight">Orwell Bridge</h1>
             <p className="text-xs text-muted-foreground">A14 · Ipswich ↔ Felixstowe</p>
           </div>
+          <div className="flex items-center gap-2">
           <div className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border font-medium ${
             bridgeStatus.freshness === "live"
-              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
               : isWarning
-              ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
               : "border-border/60 bg-muted/20 text-muted-foreground"
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
@@ -286,17 +281,17 @@ export default function Home() {
               ? "Connecting..."
               : `${getFreshnessLabel(bridgeStatus.freshness)} · ${bridgeStatus.lastUpdated}`}
           </div>
+          <ThemeToggle />
+          </div>
         </div>
       </header>
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
 
-        <button type="button" className="text-sm underline" onClick={() => setRefresh(value => value + 1)}>Refresh status</button>
-        <p className="text-sm text-muted-foreground"><a className="underline" href="https://nationalhighways.co.uk/roads-and-travel/live-travel-updates/the-orwell-bridge/">Check official National Highways bridge updates</a>. This independent site is not operated by National Highways. Follow official instructions and road signs.</p>
         {/* Staleness / error warning */}
         {isWarning && (
-          <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200">
-            <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
+          <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-800 dark:text-amber-200">
+            <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-700 dark:text-amber-400 flex-shrink-0" />
             <p className="text-sm leading-relaxed">
               {bridgeStatus.freshness === "error"
                 ? "Could not refresh live data. Check official travel sources before travelling."
@@ -317,7 +312,7 @@ export default function Home() {
                 { direction: "Westbound", route: "Felixstowe → Ipswich", status: bridgeStatus.westbound, traffic: isWarning ? undefined : trafficData?.westbound },
               ] as const
             ).map(({ direction, route, status, traffic }) => (
-              <div key={direction} className={`rounded-2xl border p-6 ${getStatusBorder(status)}`}>
+              <div key={direction} className="rounded-2xl border border-border/60 bg-card p-6">
                 <div className="flex items-start justify-between mb-5">
                   <div>
                     <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
@@ -328,7 +323,7 @@ export default function Home() {
                   {traffic?.averageSpeed != null && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                       <Gauge className="h-3.5 w-3.5" />
-                      {traffic.averageSpeed} mph
+                      <NumberTicker value={traffic.averageSpeed} /> mph
                     </div>
                   )}
                 </div>
@@ -338,7 +333,7 @@ export default function Home() {
                     {getStatusText(status)}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-3">{traffic?.details || "No current directional observation is available. Check the official bridge updates above."}</p>
+                <p className="text-sm text-muted-foreground mt-3">{traffic?.details || "No current directional observation is available. Check official travel sources before travelling."}</p>
               </div>
             ))}
           </div>
@@ -356,7 +351,7 @@ export default function Home() {
                 <span className="text-xs">Temperature</span>
               </div>
               <div>
-                <span className="text-3xl font-mono font-semibold">{weather?.temperature ?? "—"}</span>
+                <span className="text-3xl font-mono font-semibold">{weather ? <NumberTicker value={weather.temperature} /> : "—"}</span>
                 <span className="text-lg text-muted-foreground ml-0.5">°C</span>
               </div>
             </div>
@@ -366,7 +361,7 @@ export default function Home() {
                 <span className="text-xs">Wind Speed</span>
               </div>
               <div>
-                <span className="text-3xl font-mono font-semibold">{weather?.windSpeed ?? "—"}</span>
+                <span className="text-3xl font-mono font-semibold">{weather ? <NumberTicker value={weather.windSpeed} /> : "—"}</span>
                 <span className="text-base text-muted-foreground ml-1">mph</span>
               </div>
             </div>
@@ -385,10 +380,9 @@ export default function Home() {
             <WeatherIcon description={weather?.description ?? "Unknown"} className="h-4 w-4" />
             <span>{weatherLoading ? (weather ? "Updating weather…" : "Loading weather…") : weather?.description ?? "Weather unavailable"}</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Nearby Open-Meteo model estimate{weatherObservation ? ` · Model time ${new Date(weatherObservation.timestamp).toLocaleString("en-GB", { timeZone: "Europe/London" })}${!weather ? " (outdated)" : ""}` : ""}. Wind is a mean at 10 m, not a gust or a bridge restriction. <a className="underline" href="https://nationalhighways.co.uk/roads-and-travel/live-travel-updates/the-orwell-bridge/">Official wind and bridge guidance</a>.</p>
           {weather && weather.windSpeed > 30 && (
-            <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-200 mt-3">
-              <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-800 dark:text-amber-200 mt-3">
+              <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-700 dark:text-amber-400 flex-shrink-0" />
               <p className="text-sm">Strong winds nearby. This estimate does not confirm a bridge restriction; follow official updates and road signs.</p>
             </div>
           )}
@@ -399,7 +393,7 @@ export default function Home() {
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
             Past Events
           </h2>
-          {eventsError && <p className="text-sm text-amber-200 mb-3">History unavailable.{eventsUpdatedAt ? ` Showing last loaded events from ${new Date(eventsUpdatedAt).toLocaleString("en-GB", { timeZone: "Europe/London" })}.` : " Please try again."} <button type="button" className="underline" onClick={() => setRefresh(value => value + 1)}>Retry history</button></p>}
+          {eventsError && <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">History unavailable.{eventsUpdatedAt ? ` Showing last loaded events from ${new Date(eventsUpdatedAt).toLocaleString("en-GB", { timeZone: "Europe/London" })}.` : " Please try again."} <button type="button" className="underline" onClick={() => setRefresh(value => value + 1)}>Retry history</button></p>}
           {eventsLoading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground text-sm rounded-xl border border-border/50">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -443,20 +437,21 @@ export default function Home() {
             </div>
           )}
         </div>
+        <ClosureAlerts />
         <InstallApp />
       </main>
 
       <footer className="border-t border-border/50 px-6 py-8 mt-8">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-3">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            Created with <Heart className="h-3.5 w-3.5 text-rose-400 fill-rose-400 mx-0.5" /> by Alex
+            Created with <Heart className="h-3.5 w-3.5 text-rose-700 dark:text-rose-400 fill-rose-400 mx-0.5" /> by <a href="https://alex.codes" className="underline hover:text-foreground">Alex</a>
           </div>
           <p className="text-xs text-muted-foreground">Traffic: TomTom; HERE and National Highways where configured and available. Weather: Open-Meteo.</p>
           <a
             href="https://ko-fi.com/alexbaldry"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/80 hover:border-zinc-600 text-white text-sm font-medium rounded-xl transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 border border-border text-primary-foreground text-sm font-medium rounded-xl transition-colors"
           >
             <Coffee className="h-4 w-4" />
             Buy me a Red Bull

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -107,8 +107,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const theme = (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={theme}>
       <head>
         <StructuredData nonce={nonce} />
       </head>

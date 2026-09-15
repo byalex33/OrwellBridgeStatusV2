@@ -1,4 +1,8 @@
 /* Network only: never cache traffic pages or API responses. */
+self.addEventListener('install', event => {
+  event.waitUntil(self.skipWaiting());
+});
+
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
 });
@@ -14,3 +18,20 @@ self.addEventListener('fetch', event => {
   })));
 });
 
+
+self.addEventListener('push', event => {
+  let data;
+  try { data = event.data?.json(); } catch { return; }
+  if (!data || typeof data.id !== 'string' || !/^[a-zA-Z0-9:_-]{1,160}$/.test(data.id) || typeof data.title !== 'string' || !data.title.trim() || data.title.length > 120 || typeof data.body !== 'string' || !data.body.trim() || data.body.length > 500 || data.url !== '/?notification=bridge-closure') return;
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    tag: `bridge-closure-${data.id}`,
+    icon: '/icon-192.png',
+    data: { url: '/?notification=bridge-closure' },
+  }));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(self.clients.openWindow('/?notification=bridge-closure'));
+});
