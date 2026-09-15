@@ -3,6 +3,40 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* beUI-inspired short reveals and press feedback: content stays readable throughout. */
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard-content > :is(div, section, details) {
+    animation: dashboard-enter 450ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .dashboard-content > :nth-child(2) { animation-delay: 50ms; }
+  .dashboard-content > :nth-child(3) { animation-delay: 100ms; }
+  .dashboard-content > :nth-child(n + 4) { animation-delay: 150ms; }
+  .metric-grid > div {
+    animation: dashboard-enter 450ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    transition: translate 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms, box-shadow 200ms;
+  }
+  .metric-grid > :nth-child(2) { animation-delay: 60ms; }
+  .metric-grid > :nth-child(3) { animation-delay: 120ms; }
+  @media (hover: hover) and (pointer: fine) {
+    .metric-grid > div:hover { translate: 0 -2px; border-color: var(--ring); box-shadow: 0 4px 12px #00000008; }
+  }
+  .status-change {
+    animation: status-enter 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  button, footer a, summary {
+    transition: scale 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  button:not(:disabled):active, footer a:active, summary:active { scale: 0.97; }
+}
+@keyframes dashboard-enter {
+  from { opacity: 0.85; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes status-enter {
+  from { opacity: 0.85; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* beUI circle-blur theme reveal. See src/components/beui-LICENSE.txt. */
 html[data-beui-vt="circle-blur"]::view-transition-old(root) {
   animation: none;

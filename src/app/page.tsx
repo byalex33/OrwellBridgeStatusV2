@@ -272,7 +272,7 @@ export default function Home() {
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
               bridgeStatus.freshness === "live"
-                ? "bg-emerald-400 animate-pulse"
+                ? "bg-emerald-400 motion-safe:animate-pulse"
                 : isWarning
                 ? "bg-amber-400"
                 : "bg-zinc-600"
@@ -286,7 +286,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
+      <main className="dashboard-content flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
 
         {/* Staleness / error warning */}
         {isWarning && (
@@ -305,7 +305,7 @@ export default function Home() {
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
             Current Status
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="metric-grid grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(
               [
                 { direction: "Eastbound", route: "Ipswich → Felixstowe", status: bridgeStatus.eastbound, traffic: isWarning ? undefined : trafficData?.eastbound },
@@ -329,11 +329,11 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getDotColor(status)}`} />
-                  <span className={`text-4xl font-bold tracking-tight ${getStatusColor(status)}`}>
+                  <span key={status} className={`status-change text-4xl font-bold tracking-tight ${getStatusColor(status)}`}>
                     {getStatusText(status)}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-3">{traffic?.details || "No current directional observation is available. Check official travel sources before travelling."}</p>
+                <p className="text-sm text-muted-foreground mt-3">{traffic?.details?.replace(/\s*\(TomTom\)/g, "") || "No current directional observation is available. Check official travel sources before travelling."}</p>
               </div>
             ))}
           </div>
@@ -344,7 +344,7 @@ export default function Home() {
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
             Weather
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="metric-grid grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-xl border border-border/50 bg-card p-4">
               <div className="flex items-center gap-1.5 text-muted-foreground mb-3">
                 <Thermometer className="h-3.5 w-3.5" />
@@ -368,7 +368,7 @@ export default function Home() {
             <div className="rounded-xl border border-border/50 bg-card p-4">
               <div className="flex items-center gap-1.5 text-muted-foreground mb-3">
                 <ArrowUp
-                  className="h-3.5 w-3.5 transition-transform"
+                  className="h-3.5 w-3.5 motion-safe:transition-transform"
                   style={{ transform: `rotate(${weather?.windDirection ?? 0}deg)` }}
                 />
                 <span className="text-xs">Direction</span>
@@ -396,7 +396,7 @@ export default function Home() {
           {eventsError && <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">History unavailable.{eventsUpdatedAt ? ` Showing last loaded events from ${new Date(eventsUpdatedAt).toLocaleString("en-GB", { timeZone: "Europe/London" })}.` : " Please try again."} <button type="button" className="underline" onClick={() => setRefresh(value => value + 1)}>Retry history</button></p>}
           {eventsLoading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground text-sm rounded-xl border border-border/50">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
               Loading events...
             </div>
           ) : pastEvents.length === 0 && eventsError ? null : pastEvents.length === 0 ? (

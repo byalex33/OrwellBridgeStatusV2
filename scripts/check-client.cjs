@@ -30,6 +30,10 @@ const tick = () => new Promise(setImmediate);
   await tick();
   assert.equal(page.state[0].eastbound,'open');
   assert.equal(page.state[0].westbound,'closed');
+  page.state[4] = { eastbound: { status: 'OPEN', details: 'Sources: A14 Eastbound (TomTom)' }, westbound: { status: 'CLOSED', details: 'Sources: A14 Westbound (TomTom)' } };
+  assert.doesNotMatch(page.render(), /\(TomTom\)/);
+  assert.match(page.render(), /Sources: A14 Eastbound/);
+  assert.match(page.render(), /Traffic: TomTom/);
   assert.doesNotMatch(page.render(), /Check official National Highways bridge updates|Refresh status/);
   assert.match(page.render(), /href="https:\/\/alex.codes"[^>]*>Alex<\/a>/);
 

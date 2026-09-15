@@ -4,6 +4,13 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
+const css = require('postcss').parse(fs.readFileSync('src/app/globals.css', 'utf8'));
+css.walkRules(rule => {
+  if (!/dashboard-content|metric-grid|status-change|:active/.test(rule.selector)) return;
+  let parent = rule.parent;
+  while (parent && !(parent.type === 'atrule' && parent.name === 'media' && parent.params === '(prefers-reduced-motion: no-preference)')) parent = parent.parent;
+  assert.ok(parent, 'Dashboard movement must be opt-in to motion: ' + rule.selector);
+});
 function load(name, dependencies, globals = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(`src/components/${name}.tsx`, 'utf8'), {
