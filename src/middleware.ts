@@ -9,7 +9,7 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://vitals.vercel-insights.com",
+    "connect-src 'self' https://vitals.vercel-insights.com https://collect.tracwell.app",
     "worker-src 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",

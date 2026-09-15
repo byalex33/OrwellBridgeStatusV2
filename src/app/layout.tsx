@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import StructuredData from "@/components/StructuredData";
+import TracwellAnalytics from "@/components/TracwellAnalytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -116,6 +117,7 @@ export default async function RootLayout({
       >
         {children}
         <Analytics />
+        <TracwellAnalytics />
         <SpeedInsights />
       </body>
     </html>

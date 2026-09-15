@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { analytics } from '@/components/TracwellAnalytics';
 
 export default function InstallApp() {
   const [installed, setInstalled] = useState(false);
@@ -8,7 +9,10 @@ export default function InstallApp() {
   useEffect(() => {
     const displayMode = matchMedia('(display-mode: standalone)');
     const update = () => setInstalled(displayMode.matches || !!(navigator as Navigator & { standalone?: boolean }).standalone);
-    const onInstalled = () => setInstalled(true);
+    const onInstalled = () => {
+      setInstalled(true);
+      analytics?.track('app_installed', { source: 'browser' });
+    };
     update();
     displayMode.addEventListener('change', update);
     window.addEventListener('appinstalled', onInstalled);
