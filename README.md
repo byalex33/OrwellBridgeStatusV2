@@ -56,6 +56,14 @@ The Next.js manifest supplies the name and 192/512px icons. The service worker r
 
 Run `node scripts/check-pwa.cjs` for manifest, icon and worker checks. After deployment, install on a real phone and reopen in airplane mode to verify the offline screen.
 
+### Browser analytics
+
+Tracwell runs once from the root layout in production alongside Vercel Analytics and Speed Insights. It uses the public project key in `src/components/TracwellAnalytics.tsx`, private collection, granted consent and Do Not Track protection. No environment variables are needed. Private mode does not persist browser identity. The app has no sign-in or analytics consent flow.
+
+The SDK records page views and standard History API navigation automatically. The browser's `appinstalled` event records `app_installed` with `source: 'browser'`. Opening an already installed app or showing installation instructions does not record an installation. Browsers that do not emit `appinstalled` cannot report this outcome. No user identifiers are sent.
+
+Run `node scripts/check-analytics.mjs` for initialization, completed-installation and DNT checks; it also runs in `npm run check`. For live verification, allow the deployed origin in Tracwell and check its Realtime report with DNT off. See the [Next.js integration guide](https://tracwell.app/docs/frameworks/nextjs).
+
 ### Hosting
 
 Use the existing Vercel project linked above. Check the project name and connected repository before importing or linking a checkout: a local `.vercel` directory can refer to a different project. Put server credentials in that project's environment settings with the intended Production/Preview scope. When deployment is enabled, pull requests create previews and merging to `master` deploys production through the GitHub integration. Respect paused deployments; canceled or missing deployment checks do not prove that a release passed.
