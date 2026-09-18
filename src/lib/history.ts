@@ -26,7 +26,7 @@ export async function saveBridgeTransition(client: MongoClient, current: BridgeS
     if (last?.eastboundStatus === eastboundStatus && last?.westboundStatus === westboundStatus) return;
     await collection.insertOne({
       status: current.status, timestamp: new Date(current.timestamp), description: current.description,
-      direction: current.direction, averageSpeed: current.averageSpeed, speedUnit: current.speedUnit, eastboundStatus, westboundStatus,
+      direction: current.direction, averageSpeed: current.averageSpeed, speedUnit: current.speedUnit, eastboundStatus, westboundStatus, directions,
     }, { session });
   }, { timeoutMS: 2000, writeConcern: { w: 'majority' } }));
 }

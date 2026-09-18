@@ -16,3 +16,6 @@ assert.equal(mapBridgeRecord({ timestamp: '2026-01-01', speedUnit: 'mph', averag
 assert.equal(mapBridgeRecord({ timestamp: '2026-01-01', averageSpeed: 40 }).averageSpeed, null);
 assert.equal(mapBridgeRecord({ timestamp: '2026-01-01', speedUnit: 'mph', averageSpeed: 0 }).averageSpeed, 0);
 assert.equal(mapBridgeRecord({ timestamp: '2026-01-01', speedUnit: 'mph', averageSpeed: null }).averageSpeed, null);
+const directions = { eastbound: { status: 'CLOSED', description: 'TomTom' }, westbound: { status: 'OPEN', description: 'HERE' } };
+assert.deepEqual(mapBridgeRecord({ timestamp: '2026-01-01', directions }).directions, directions);
+assert.equal(mapBridgeRecord({ timestamp: '2026-01-01' }).directions, undefined);

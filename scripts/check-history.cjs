@@ -49,6 +49,7 @@ const save = (eastbound,westbound,time) => exportsForTest.saveBridgeTransition(c
   await save('OPEN','CLOSED',2000);
   await Promise.all(Array.from({length:20},() => save('CLOSED','CLOSED',3000)));
   assert.equal(records.length,3);
+  assert.deepEqual(records[0].directions, {eastbound:{status:'CLOSED'},westbound:{status:'OPEN'}}, 'retain directional evidence');
   assert.ok(records.every(record => record.speedUnit === 'mph'));
   assert.deepEqual(records.map(r => [r.eastboundStatus,r.westboundStatus]),[['CLOSED','OPEN'],['OPEN','CLOSED'],['CLOSED','CLOSED']]);
   await Promise.all([save('OPEN','OPEN',6000), save('CLOSED','OPEN',5000)]);

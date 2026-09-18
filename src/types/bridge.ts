@@ -7,6 +7,7 @@ export interface BridgeStatusRecord {
   averageSpeed: number | null;
   /** Missing on legacy records whose measurement unit is unknown. */
   speedUnit?: 'mph';
+  directions?: TrafficDirections;
   __v: number;
 }
 

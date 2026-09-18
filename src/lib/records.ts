@@ -1,4 +1,4 @@
-import type { BridgeStatusRecord } from '@/types/bridge';
+import type { BridgeStatusRecord, TrafficDirections } from '@/types/bridge';
 
 export type DbBridgeRecord = {
   _id?: string | { toString(): string };
@@ -10,6 +10,7 @@ export type DbBridgeRecord = {
   direction?: string;
   averageSpeed?: number | null;
   speedUnit?: 'mph';
+  directions?: TrafficDirections;
   __v?: number;
 };
 
@@ -65,6 +66,7 @@ export function mapBridgeRecord(record: DbBridgeRecord): BridgeStatusRecord | nu
     direction: normalizeDirection(record.direction),
     averageSpeed: record.speedUnit === 'mph' ? record.averageSpeed ?? null : null,
     speedUnit: record.speedUnit === 'mph' ? 'mph' : undefined,
+    directions: record.directions,
     __v: record.__v || 0,
   };
 }

@@ -28,19 +28,31 @@ export async function GET() {
       const db = client.db('paststatus');
       const collection = db.collection('bridgeevents');
 
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-      const records = await collection
+      const records = collection
         .aggregate([
           { $match: { status: { $in: ['CLOSED', 'DELAYS', 'DELAYED'] } } },
           { $set: { timestamp: { $convert: { input: '$timestamp', to: 'date', onError: null, onNull: null } } } },
-          { $match: { timestamp: { $gte: since } } },
+          { $match: { timestamp: { $ne: null } } },
           { $sort: { timestamp: -1 } },
-          { $limit: 5 },
-        ])
-        .toArray();
+        ]);
 
-      return records.map(mapBridgeRecord).filter((record): record is BridgeStatusRecord => record !== null);
+      const events: BridgeStatusRecord[] = [];
+      const lastShown = new Map<string, number>();
+      try {
+        for await (const raw of records) {
+          const record = mapBridgeRecord(raw);
+          if (!record) continue;
+          const key = `${record.status}:${record.direction}`;
+          const timestamp = new Date(record.timestamp).getTime();
+          if ((lastShown.get(key) ?? Infinity) - timestamp < 30 * 60 * 1000) continue;
+          lastShown.set(key, timestamp);
+          events.push(record);
+          if (events.length === 5) break;
+        }
+      } finally {
+        await records.close();
+      }
+      return events;
     }, 600);
     return jsonNoStore(events);
   } catch (error) {

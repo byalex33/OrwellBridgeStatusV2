@@ -31,9 +31,9 @@ const tick = () => new Promise(setImmediate);
   assert.equal(page.state[0].eastbound,'open');
   assert.equal(page.state[0].westbound,'closed');
   page.state[4] = { eastbound: { status: 'OPEN', details: 'Sources: A14 Eastbound (TomTom)' }, westbound: { status: 'CLOSED', details: 'Sources: A14 Westbound (TomTom)' } };
-  assert.doesNotMatch(page.render(), /\(TomTom\)/);
+  assert.match(page.render(), /\(TomTom\)/);
   assert.match(page.render(), /Sources: A14 Eastbound/);
-  assert.match(page.render(), /Traffic: TomTom/);
+  assert.doesNotMatch(page.render(), /Traffic: TomTom/);
   assert.doesNotMatch(page.render(), /Check official National Highways bridge updates|Refresh status/);
   assert.match(page.render(), /href="https:\/\/alex.codes"[^>]*>Alex<\/a>/);
 
@@ -56,9 +56,16 @@ const tick = () => new Promise(setImmediate);
   let eventsFail=false, historyRequests=0;
   const history=dashboard(async path=>{if(path.includes('events'))historyRequests++;return response(path.includes('events')?(eventsFail?{message:'unavailable'}:[{_id:'fixture',status:'CLOSED',description:'Recorded closure',direction:'eastbound',timestamp:new Date().toISOString()}]):{},!eventsFail);});
   await tick();eventsFail=true;history.poll();await tick();
-  for (const [direction, expected, description = 'Bridge closed in at least one direction'] of [['eastbound','Bridge closed eastbound'],['westbound','Bridge closed westbound'],['both','Bridge closed in both directions'],['north','Bridge closed in at least one direction'],['westbound','Diversion available in at least one direction; bridge closed westbound','Diversion available in at least one direction; bridge closed westbound']]) {
+  for (const [direction, expected, description = 'Bridge closed in at least one direction'] of [['eastbound','Bridge closed eastbound'],['westbound','Bridge closed westbound'],['both','Bridge closed in at least one direction'],['north','Bridge closed in at least one direction'],['westbound','Diversion available in at least one direction; bridge closed westbound','Diversion available in at least one direction; bridge closed westbound']]) {
     const legacy=dashboard(async path=>response(path.includes('events')?[{_id:'legacy',status:'CLOSED',direction,description,timestamp:new Date().toISOString()}]:{}));await tick();assert.ok(legacy.render().includes(expected));legacy.cleanup();
   }
+  assert.doesNotMatch(history.render(), /Source not recorded|Reported by:/);
+  const sourced=dashboard(async path=>response(path.includes('events')?[{_id:'sourced',status:'CLOSED',direction:'both',description:'Bridge is closed in at least one direction',timestamp:new Date().toISOString(),directions:{eastbound:{status:'CLOSED',description:'A14 Eastbound (TomTom)'},westbound:{status:'CLOSED',description:'National Highways'}}}]:{}));
+  await tick();
+  assert.match(sourced.render(), /Bridge is closed in both directions/);
+  assert.ok(sourced.render().includes('Reported by: eastbound: A14 Eastbound (TomTom); westbound: National Highways'));
+  assert.match(sourced.render(), /motion-safe:animate-pulse/);
+  sourced.cleanup();
   const freshWeather=dashboard(async path=>response(path.includes('weather')?{success:true,data:{timestamp:new Date().toISOString(),temperature:12,windSpeed:10,windDirection:0,description:'Clear'}}:path.includes('events')?[]:{}));await tick();
   assert.doesNotMatch(freshWeather.render(),/Nearby Open-Meteo model estimate|Model time|Wind is a mean/);assert.match(freshWeather.render(),/data-slot="number-ticker"/);
   freshWeather.state[1].timestamp='2020-01-01T00:00:00Z';freshWeather.age();assert.match(freshWeather.render(),/Weather unavailable/);freshWeather.cleanup();

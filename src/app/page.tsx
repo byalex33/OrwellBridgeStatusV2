@@ -225,7 +225,7 @@ export default function Home() {
 
   const eventDescription = (record: BridgeStatusRecord) => {
     const direction = record.direction === "eastbound" || record.direction === "westbound"
-      ? record.direction : record.direction === "both" ? "in both directions" : "in at least one direction";
+      ? record.direction : record.directions?.eastbound.status === record.status && record.directions?.westbound.status === record.status ? "in both directions" : "in at least one direction";
     return record.description.replace(/^(Bridge (?:is )?(?:closed|experiencing delays)) in at least one direction$/, `$1 ${direction}`);
   };
 
@@ -270,9 +270,9 @@ export default function Home() {
               ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
               : "border-border/60 bg-muted/20 text-muted-foreground"
           }`}>
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 motion-safe:animate-pulse ${
               bridgeStatus.freshness === "live"
-                ? "bg-emerald-400 motion-safe:animate-pulse"
+                ? "bg-emerald-400"
                 : isWarning
                 ? "bg-amber-400"
                 : "bg-zinc-600"
@@ -328,12 +328,12 @@ export default function Home() {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getDotColor(status)}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 motion-safe:animate-pulse ${getDotColor(status)}`} />
                   <span key={status} className={`status-change text-4xl font-bold tracking-tight ${getStatusColor(status)}`}>
                     {getStatusText(status)}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-3">{traffic?.details?.replace(/\s*\(TomTom\)/g, "") || "No current directional observation is available. Check official travel sources before travelling."}</p>
+                <p className="text-sm text-muted-foreground mt-3">{traffic?.details || "No current directional observation is available. Check official travel sources before travelling."}</p>
               </div>
             ))}
           </div>
@@ -412,9 +412,12 @@ export default function Home() {
                     key={record._id}
                     className="grid grid-cols-[auto_minmax(0,1fr)] sm:flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getEventDot(record.status)}`} />
+                    <div aria-hidden="true" className={`w-1.5 h-1.5 rounded-full flex-shrink-0 motion-safe:animate-pulse ${getEventDot(record.status)}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground break-words">{eventDescription(record)}</p>
+                      {record.directions && <p className="text-xs text-muted-foreground mt-1 break-words">
+                        {`Reported by: ${Object.entries(record.directions).filter(([, observation]) => observation.status === record.status).map(([direction, observation]) => `${direction}: ${observation.description}`).join('; ')}`}
+                      </p>}
                     </div>
                     <div className="col-start-2 flex flex-wrap items-center gap-3 sm:shrink-0 text-xs text-muted-foreground">
                       {record.averageSpeed != null && (
@@ -423,7 +426,7 @@ export default function Home() {
                           {record.averageSpeed}
                         </div>
                       )}
-                      <span className="px-1.5 py-0.5 rounded bg-muted/60">{record.direction}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-muted/60">{record.direction === 'both' && !record.directions ? 'Direction unverified' : record.direction}</span>
                       <span className="font-mono">{date} {time}</span>
                     </div>
                   </div>
@@ -446,7 +449,6 @@ export default function Home() {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             Created with <Heart className="h-3.5 w-3.5 text-rose-700 dark:text-rose-400 fill-rose-400 mx-0.5" /> by <a href="https://alex.codes" className="underline hover:text-foreground">Alex</a>
           </div>
-          <p className="text-xs text-muted-foreground">Traffic: TomTom; HERE and National Highways where configured and available. Weather: Open-Meteo.</p>
           <a
             href="https://ko-fi.com/alexbaldry"
             target="_blank"
