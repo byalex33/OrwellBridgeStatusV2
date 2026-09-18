@@ -5,6 +5,12 @@
 
 /* beUI-inspired short reveals and press feedback: content stays readable throughout. */
 @media (prefers-reduced-motion: no-preference) {
+  .anniversary-toast {
+    animation: anniversary-enter 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .anniversary-heart {
+    animation: anniversary-heartbeat 2.4s ease-in-out infinite;
+  }
   .dashboard-content > :is(div, section, details) {
     animation: dashboard-enter 450ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
@@ -31,6 +37,15 @@
 @keyframes dashboard-enter {
   from { opacity: 0.85; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes anniversary-enter {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes anniversary-heartbeat {
+  0%, 28%, 48%, 100% { transform: scale(1); }
+  14% { transform: scale(1.2); }
+  38% { transform: scale(1.12); }
 }
 @keyframes status-enter {
   from { opacity: 0.85; transform: translateY(3px); }

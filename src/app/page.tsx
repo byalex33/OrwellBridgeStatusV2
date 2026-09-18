@@ -4,6 +4,7 @@ import InstallApp from '@/components/InstallApp';
 import NumberTicker from '@/components/NumberTicker';
 import ThemeToggle from '@/components/ThemeToggle';
 import ClosureAlerts from '@/components/ClosureAlerts';
+import AnniversaryToast from '@/components/AnniversaryToast';
 
 import {
   Thermometer, Wind, ArrowUp, AlertTriangle, Gauge, Heart, Coffee,
@@ -444,6 +445,7 @@ export default function Home() {
         <InstallApp />
       </main>
 
+      <AnniversaryToast />
       <footer className="border-t border-border/50 px-6 py-8 mt-8">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-3">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
