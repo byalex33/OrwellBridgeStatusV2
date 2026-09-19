@@ -334,7 +334,6 @@ export default function Home() {
                     {getStatusText(status)}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-3">{traffic?.details || "No current directional observation is available. Check official travel sources before travelling."}</p>
               </div>
             ))}
           </div>
