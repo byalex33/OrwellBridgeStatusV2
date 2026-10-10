@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 (async () => {
-  const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '0'], { stdio: ['ignore', 'pipe', 'inherit'], windowsHide: true, env: { ...process.env, TOMTOM_API_KEY: '', MAPBOX_ACCESS_TOKEN: '', NATIONAL_HIGHWAYS_API_KEY: '', MONGODB_URI: '', HTTP_PROXY: 'http://127.0.0.1:1', HTTPS_PROXY: 'http://127.0.0.1:1', NO_PROXY: '127.0.0.1,localhost' } });
+  const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '0'], { stdio: ['ignore', 'pipe', 'inherit'], windowsHide: true, env: { ...process.env, MAPBOX_ACCESS_TOKEN: '', NATIONAL_HIGHWAYS_API_KEY: '', MONGODB_URI: '', HTTP_PROXY: 'http://127.0.0.1:1', HTTPS_PROXY: 'http://127.0.0.1:1', NO_PROXY: '127.0.0.1,localhost' } });
   let startupTimer;
   try {
     const url = await new Promise((resolve, reject) => {

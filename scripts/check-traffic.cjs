@@ -16,16 +16,19 @@ function load(file, mocks = {}, env = {}, expose = []) {
   return exports;
 }
 async function main() {
-  let requests = 0;
-  const traffic = load('src/lib/traffic.ts', { axios: { get: async (_url, options) => {
-    requests++;
-    assert.equal(options.params.unit, 'mph');
-    return { data: { flowSegmentData: { currentSpeed: 62, freeFlowSpeed: 70, roadClosure: false } } };
-  } } }, { TOMTOM_API_KEY: 'fixture' });
+  const reading = (status, description, averageSpeed = null) => ({ status, details: status, description, averageSpeed });
+  let mapboxCalls = 0;
+  const traffic = load('src/lib/traffic.ts', {
+    './mapbox': { getMapboxTrafficData: async () => { mapboxCalls++; return { eastbound: reading('OPEN', 'A14 eastbound (Mapbox)', 62), westbound: reading('OPEN', 'A14 westbound (Mapbox)', 58) }; } },
+    './national-highways': { getNationalHighwaysData: async () => ({ eastbound: reading('UNKNOWN', 'National Highways'), westbound: reading('CLOSED', 'National Highways') }) },
+  }, { MAPBOX_ACCESS_TOKEN: 'fixture', NATIONAL_HIGHWAYS_API_KEY: 'fixture' });
   const result = await traffic.getBridgeTrafficData();
-  assert.equal(requests, 2);
+  assert.equal(mapboxCalls, 1);
+  assert.equal(result.directions.eastbound.status, 'OPEN');
   assert.equal(result.directions.eastbound.averageSpeed, 62);
-  assert.match(result.directions.eastbound.description, /TomTom/);
+  assert.match(result.directions.eastbound.description, /Mapbox/);
+  assert.equal(result.directions.westbound.status, 'CLOSED', 'an official closure outranks a flowing estimate');
+  assert.equal(result.overallStatus.status, 'CLOSED');
   console.log('Traffic regression checks passed');
 }
 if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,9 +1,3 @@
-// A14 carriageways: https://www.openstreetmap.org/way/3989499 and /way/5232026
-export const BRIDGE_POINTS = {
-  eastbound: { point: '52.02701,1.166', description: 'A14 Eastbound (Ipswich to Felixstowe)' },
-  westbound: { point: '52.02691,1.166', description: 'A14 Westbound (Felixstowe to Ipswich)' },
-};
-
 export type Point = { lat: number; lng: number };
 
 // ponytail: a cross-section of this straight bridge; use road-link matching if coverage expands.
