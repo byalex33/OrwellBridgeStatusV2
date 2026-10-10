@@ -1,4 +1,3 @@
-import { getHereTrafficData } from './here';
 import { getNationalHighwaysData } from './national-highways';
 import { getMapboxTrafficData } from './mapbox';
 import { consensusDirection } from './consensus';
@@ -188,7 +187,6 @@ async function fetchTomTomData(): Promise<DirectionalStatus> {
 export async function getBridgeTrafficData() {
   const results = await Promise.allSettled([
     process.env.TOMTOM_API_KEY ? fetchTomTomData() : Promise.resolve(null),
-    process.env.HERE_API_KEY ? getHereTrafficData() : Promise.resolve(null),
     process.env.NATIONAL_HIGHWAYS_API_KEY ? getNationalHighwaysData() : Promise.resolve(null),
     process.env.MAPBOX_ACCESS_TOKEN ? getMapboxTrafficData() : Promise.resolve(null),
   ]);

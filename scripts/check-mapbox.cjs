@@ -42,3 +42,4 @@ async function main() {
   console.log('Mapbox directional checks passed');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
+assert.equal(load('src/lib/bridge.ts').crossingDirection([null, {}]), null);
