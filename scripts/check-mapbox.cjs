@@ -9,6 +9,7 @@ const route = (overrides = {}, coordinates = east, congestion = ['low']) => ({
 });
 async function main() {
   const mapbox = load('src/lib/mapbox.ts');
+  const realWarn = console.warn; console.warn = () => {};
   const analyze = (r, direction = 'eastbound') => mapbox.analyzeMapboxRoute(r, direction);
   assert.equal(analyze(route()).status, 'OPEN');
   assert.equal(analyze(route()).averageSpeed, 36);
@@ -39,6 +40,7 @@ async function main() {
   assert.equal(result.westbound.status, 'UNKNOWN');
   const down = load('src/lib/mapbox.ts', { axios: { get: async () => ({ data: { code: 'NoRoute' } }) } });
   await assert.rejects(() => down.getMapboxTrafficData(), /unavailable/);
+  console.warn = realWarn;
   console.log('Mapbox directional checks passed');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
