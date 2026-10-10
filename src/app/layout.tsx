@@ -17,26 +17,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_TITLE = "Is the Orwell Bridge Open? Live A14 Status & Wind Closures";
+const SITE_DESCRIPTION = "Live A14 Orwell Bridge status both ways: open, delayed or closed. Forecast wind warnings (40 mph limit over 50 mph, closure at 60 mph+) and closure alerts.";
+const SOCIAL_DESCRIPTION = "Live A14 Orwell Bridge status both ways, high-wind warnings and closure alerts.";
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.orwellbridgestatus.com'),
   title: {
-    default: "Orwell Bridge Status - Live A14 Traffic Monitor",
+    default: SITE_TITLE,
     template: "%s | Orwell Bridge Status"
   },
-  description: "Real-time monitoring of Orwell Bridge (A14) traffic conditions, weather alerts, lane closures and delays. Essential for Suffolk commuters and logistics companies.",
+  description: SITE_DESCRIPTION,
+  applicationName: "Orwell Bridge Status",
   keywords: [
     "Orwell Bridge",
-    "A14 traffic",
-    "bridge status",
-    "Suffolk traffic",
-    "Ipswich traffic",
-    "bridge closures",
-    "wind alerts",
-    "traffic delays",
-    "real-time traffic",
-    "bridge monitoring",
-    "weather conditions",
-    "Felixstowe traffic"
+    "Orwell Bridge status",
+    "Orwell Bridge closed",
+    "Orwell Bridge wind",
+    "A14 Orwell Bridge",
+    "A14 Ipswich traffic",
+    "Orwell Bridge closure alerts"
   ],
   authors: [{ name: "Alex", url: "https://github.com/developedbyalex" }],
   creator: "Alex",
@@ -55,31 +55,25 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  // Share images come from src/app/opengraph-image.tsx and twitter-image.tsx.
   openGraph: {
     type: "website",
     locale: "en_GB",
-    url: "https://www.orwellbridgestatus.com",
+    url: "/",
     siteName: "Orwell Bridge Status",
-    title: "Orwell Bridge Status - Live A14 Traffic Monitor",
-    description: "Real-time monitoring of Orwell Bridge (A14) traffic conditions, weather alerts, lane closures and delays. Essential for Suffolk commuters.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Orwell Bridge Status Dashboard",
-      },
-    ],
+    title: SITE_TITLE,
+    description: SOCIAL_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Orwell Bridge Status - Live A14 Traffic Monitor",
-    description: "Real-time monitoring of Orwell Bridge traffic conditions and weather alerts",
-    images: ["/og-image.png"],
-    creator: "@OrwellBridgeStatus",
+    title: SITE_TITLE,
+    description: SOCIAL_DESCRIPTION,
   },
   alternates: {
-    canonical: "https://www.orwellbridgestatus.com",
+    canonical: "/",
+  },
+  formatDetection: {
+    telephone: false,
   },
   icons: {
     icon: "/logo.png",
@@ -109,7 +103,7 @@ export default async function RootLayout({
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   const theme = (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
   return (
-    <html lang="en" className={theme}>
+    <html lang="en-GB" className={theme}>
       <head>
         <StructuredData nonce={nonce} />
       </head>

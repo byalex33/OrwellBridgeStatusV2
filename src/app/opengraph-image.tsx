@@ -1,0 +1,9 @@
+import { renderSocialImage, socialImageAlt, socialImageSize } from "@/components/socialImage";
+
+export const alt = socialImageAlt;
+export const size = socialImageSize;
+export const contentType = "image/png";
+
+export default function OpenGraphImage() {
+  return renderSocialImage();
+}

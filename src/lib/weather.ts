@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { WindWarning } from '@/types/bridge';
+import type { GustForecast, WindWarning } from '@/types/bridge';
 
 export interface WeatherData {
   timestamp: string;
@@ -8,6 +8,8 @@ export interface WeatherData {
   windDirection: number;
   description: string;
   icon: string;
+  windGust?: number;
+  gustForecast?: GustForecast;
   windWarning?: WindWarning | null;
 }
 
@@ -17,15 +19,28 @@ export const CLOSURE_GUST_MPH = 60;
 const HOUR_MS = 3600000;
 
 // Open-Meteo hourly gusts are the maximum of the hour ending at each timestamp.
-export function getWindWarning(times: unknown, gusts: unknown, now = Date.now()): WindWarning | null | undefined {
+function forecastHours(times: unknown, gusts: unknown, now: number) {
   if (!Array.isArray(times) || !Array.isArray(gusts) || times.length !== gusts.length) return undefined;
   const hours = times.map((time, i) => ({ end: Number(time) * 1000, gust: gusts[i] }))
     .filter(hour => hour.end > now && hour.end <= now + 24 * HOUR_MS);
   if (!hours.length || !hours.every(hour => Number.isFinite(hour.end) && typeof hour.gust === 'number' && Number.isFinite(hour.gust) && hour.gust >= 0)) return undefined;
-  const peakGust = Math.max(...hours.map(hour => hour.gust as number));
+  return hours as Array<{ end: number; gust: number }>;
+}
+
+export function getGustForecast(times: unknown, gusts: unknown, now = Date.now()): GustForecast | undefined {
+  const hours = forecastHours(times, gusts, now);
+  if (!hours) return undefined;
+  const peak = hours.reduce((max, hour) => hour.gust > max.gust ? hour : max);
+  return { peak: Math.round(peak.gust), at: new Date(peak.end - HOUR_MS).toISOString() };
+}
+
+export function getWindWarning(times: unknown, gusts: unknown, now = Date.now()): WindWarning | null | undefined {
+  const hours = forecastHours(times, gusts, now);
+  if (!hours) return undefined;
+  const peakGust = Math.max(...hours.map(hour => hour.gust));
   const level = peakGust >= CLOSURE_GUST_MPH ? 'closure' : peakGust > LIMIT_GUST_MPH ? 'limit' : null;
   if (!level) return null;
-  const windy = hours.filter(hour => level === 'closure' ? (hour.gust as number) >= CLOSURE_GUST_MPH : (hour.gust as number) > LIMIT_GUST_MPH);
+  const windy = hours.filter(hour => level === 'closure' ? hour.gust >= CLOSURE_GUST_MPH : hour.gust > LIMIT_GUST_MPH);
   return {
     level,
     peakGust: Math.round(peakGust),
@@ -101,7 +116,7 @@ export async function getWeatherData(): Promise<WeatherData> {
       params: {
         latitude: 52.0270,
         longitude: 1.1660,
-        current: 'temperature_2m,wind_speed_10m,wind_direction_10m,weather_code',
+        current: 'temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,weather_code',
         hourly: 'wind_gusts_10m',
         forecast_hours: 25,
         wind_speed_unit: 'mph',
@@ -128,6 +143,9 @@ export async function getWeatherData(): Promise<WeatherData> {
     windDirection: current.wind_direction_10m,
     description: getWeatherDescription(current.weather_code),
     icon: getWeatherIcon(current.weather_code),
+    // Gusts are optional extras: missing values hide the gauge rather than failing the weather.
+    windGust: Number.isFinite(current.wind_gusts_10m) && current.wind_gusts_10m >= 0 ? Math.round(current.wind_gusts_10m) : undefined,
+    gustForecast: getGustForecast(response.data.hourly?.time, response.data.hourly?.wind_gusts_10m),
     windWarning: getWindWarning(response.data.hourly?.time, response.data.hourly?.wind_gusts_10m),
   };
 }

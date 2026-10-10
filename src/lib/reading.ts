@@ -1,5 +1,6 @@
 import getMongoClient from './mongodb';
 import { getBridgeTrafficData } from './traffic';
+import { recordTrafficSample } from './patterns';
 
 export type TrafficReading = Awaited<ReturnType<typeof getBridgeTrafficData>>;
 
@@ -25,6 +26,11 @@ export async function refreshTrafficReading(): Promise<TrafficReading> {
     await (await readings()).updateOne({ _id: 'bridge' }, { $set: reading }, { upsert: true });
   } catch (error) {
     console.error('Traffic reading save failed', { message: error instanceof Error ? error.message : 'Unknown error' });
+  }
+  try {
+    await recordTrafficSample(reading.directions, reading.timestamp);
+  } catch (error) {
+    console.error('Traffic sample save failed', { message: error instanceof Error ? error.message : 'Unknown error' });
   }
   return reading;
 }

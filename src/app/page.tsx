@@ -5,13 +5,16 @@ import NumberTicker from '@/components/NumberTicker';
 import ThemeToggle from '@/components/ThemeToggle';
 import ClosureAlerts from '@/components/ClosureAlerts';
 import AnniversaryToast from '@/components/AnniversaryToast';
+import WindGauge from '@/components/WindGauge';
+import TrafficPatterns from '@/components/TrafficPatterns';
+import BridgeFaq from '@/components/BridgeFaq';
 
 import {
   Thermometer, Wind, ArrowUp, AlertTriangle, Gauge, Heart, Coffee,
   Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { BridgeStatusRecord, BridgeStatusResponse, WeatherResponse, TrafficDirections, WindWarning } from "@/types/bridge";
+import { BridgeStatusRecord, BridgeStatusResponse, WeatherResponse, TrafficDirections, WindWarning, GustForecast } from "@/types/bridge";
 
 type LaneStatus = "open" | "delayed" | "closed" | "unknown";
 type DataFreshness = "loading" | "live" | "cached" | "stale" | "fallback" | "error";
@@ -32,6 +35,8 @@ interface WeatherData {
   windDirection: number;
   description: string;
   icon: string;
+  windGust?: number;
+  gustForecast?: GustForecast;
   windWarning?: WindWarning | null;
 }
 
@@ -194,6 +199,8 @@ export default function Home() {
   const weatherAge = weatherObservation ? now - new Date(weatherObservation.timestamp).getTime() : NaN;
   const weather = Number.isFinite(weatherAge) && weatherAge >= -60000 && weatherAge <= 1800000 ? weatherObservation : null;
   const windWarning = weather && isWindWarning(weather.windWarning) && Date.parse(weather.windWarning.until) > now ? weather.windWarning : null;
+  const windGust = weather && Number.isFinite(weather.windGust) && weather.windGust! >= 0 ? weather.windGust : undefined;
+  const gustForecast = weather?.gustForecast && Number.isFinite(weather.gustForecast.peak) && Number.isFinite(Date.parse(weather.gustForecast.at)) ? weather.gustForecast : undefined;
 
   const getStatusColor = (status: LaneStatus) => {
     switch (status) {
@@ -271,7 +278,7 @@ export default function Home() {
       <header className="border-b border-border/50 px-6 py-4">
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-base font-semibold text-foreground tracking-tight">Orwell Bridge</h1>
+            <h1 className="text-base font-semibold text-foreground tracking-tight">Orwell Bridge Status</h1>
             <p className="text-xs text-muted-foreground">A14 · Ipswich ↔ Felixstowe</p>
           </div>
           <div className="flex items-center gap-2">
@@ -299,6 +306,9 @@ export default function Home() {
       </header>
 
       <main className="dashboard-content flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-5">
+        <p className="text-sm text-muted-foreground">
+          Live A14 traffic in both directions across the Orwell Bridge near Ipswich, with high-wind warnings and closure alerts.
+        </p>
 
         {/* Staleness / error warning */}
         {isWarning && (
@@ -325,7 +335,7 @@ export default function Home() {
               <p>
                 Gusts up to {windWarning.peakGust} mph are forecast between {formatForecastTime(windWarning.from)} and {formatForecastTime(windWarning.until)}.{" "}
                 {windWarning.level === "closure"
-                  ? "National Highways closes the bridge when gusts of 60 mph or more are forecast."
+                  ? "National Highways closes the bridge when winds of 60 mph or more are forecast."
                   : "National Highways applies a 40 mph limit in winds above 50 mph and closes the bridge at 60 mph."}
               </p>
               <p className="opacity-80">Based on a weather forecast, not an official notice. Check National Highways before travelling.</p>
@@ -374,7 +384,7 @@ export default function Home() {
         {/* Weather */}
         <div>
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-            Weather
+            Wind &amp; Weather
           </h2>
           <div className="metric-grid grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-xl border border-border/50 bg-card p-4">
@@ -412,6 +422,7 @@ export default function Home() {
             <WeatherIcon description={weather?.description ?? "Unknown"} className="h-4 w-4" />
             <span>{weatherLoading ? (weather ? "Updating weather…" : "Loading weather…") : weather?.description ?? "Weather unavailable"}</span>
           </div>
+          <WindGauge gust={windGust} forecast={gustForecast} />
           {weather && !windWarning && weather.windSpeed > 30 && (
             <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-800 dark:text-amber-200 mt-3">
               <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-700 dark:text-amber-400 flex-shrink-0" />
@@ -419,6 +430,8 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <TrafficPatterns />
 
         {/* Past Events */}
         <div>
@@ -474,6 +487,7 @@ export default function Home() {
         </div>
         <ClosureAlerts />
         <InstallApp />
+        <BridgeFaq />
       </main>
 
       <AnniversaryToast />
@@ -482,6 +496,7 @@ export default function Home() {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             Created with <Heart className="h-3.5 w-3.5 text-rose-700 dark:text-rose-400 fill-rose-400 mx-0.5" /> by <a href="https://alex.codes" className="underline hover:text-foreground">Alex</a>
           </div>
+          <p className="text-xs text-muted-foreground text-center">Independent site, not affiliated with National Highways. Check official sources before travelling.</p>
           <a
             href="https://ko-fi.com/alexbaldry"
             target="_blank"

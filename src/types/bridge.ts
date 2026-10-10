@@ -51,6 +51,27 @@ export interface WindWarning {
   until: string;
 }
 
+export interface GustForecast {
+  peak: number;
+  at: string;
+}
+
+export interface DirectionPattern {
+  typical: number | null;
+  samples: number;
+  // Average mph by Europe/London hour (0-23) and weekday (Mon-Sun); null where data is too thin.
+  byHour: Array<number | null>;
+  byDay: Array<number | null>;
+  slowestHour: { hour: number; speed: number } | null;
+  slowestDay: { day: string; speed: number } | null;
+}
+
+export interface TrafficPatterns {
+  since: string | null;
+  days: number;
+  directions: { eastbound: DirectionPattern; westbound: DirectionPattern };
+}
+
 export interface WeatherResponse {
   success: boolean;
   data: {
@@ -60,6 +81,8 @@ export interface WeatherResponse {
     windDirection: number;
     description: string;
     icon: string;
+    windGust?: number;
+    gustForecast?: GustForecast;
     // null: no high winds forecast; absent: gust forecast unavailable.
     windWarning?: WindWarning | null;
   } | null;
