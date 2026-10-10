@@ -11,7 +11,7 @@ import {
   Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { BridgeStatusRecord, BridgeStatusResponse, WeatherResponse, TrafficDirections } from "@/types/bridge";
+import { BridgeStatusRecord, BridgeStatusResponse, WeatherResponse, TrafficDirections, WindWarning } from "@/types/bridge";
 
 type LaneStatus = "open" | "delayed" | "closed" | "unknown";
 type DataFreshness = "loading" | "live" | "cached" | "stale" | "fallback" | "error";
@@ -32,7 +32,17 @@ interface WeatherData {
   windDirection: number;
   description: string;
   icon: string;
+  windWarning?: WindWarning | null;
 }
+
+function isWindWarning(value: unknown): value is WindWarning {
+  const warning = value as WindWarning | null;
+  return !!warning && (warning.level === "limit" || warning.level === "closure") && Number.isFinite(warning.peakGust) &&
+    Number.isFinite(Date.parse(warning.from)) && Number.isFinite(Date.parse(warning.until));
+}
+
+const formatForecastTime = (iso: string) =>
+  new Date(iso).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
 function WeatherIcon({ description, className }: { description: string; className?: string }) {
   const d = description.toLowerCase();
@@ -183,6 +193,7 @@ export default function Home() {
 
   const weatherAge = weatherObservation ? now - new Date(weatherObservation.timestamp).getTime() : NaN;
   const weather = Number.isFinite(weatherAge) && weatherAge >= -60000 && weatherAge <= 1800000 ? weatherObservation : null;
+  const windWarning = weather && isWindWarning(weather.windWarning) && Date.parse(weather.windWarning.until) > now ? weather.windWarning : null;
 
   const getStatusColor = (status: LaneStatus) => {
     switch (status) {
@@ -254,7 +265,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{bridgeStatus.freshness === "loading" ? "Checking bridge status." : `Eastbound ${getStatusText(bridgeStatus.eastbound)}. Westbound ${getStatusText(bridgeStatus.westbound)}.${isWarning ? " Current traffic data is not confirmed." : ""}`}{weatherError || (weatherObservation && !weather) ? " Weather unavailable." : ""}{eventsError ? " History unavailable." : ""}</p>
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{bridgeStatus.freshness === "loading" ? "Checking bridge status." : `Eastbound ${getStatusText(bridgeStatus.eastbound)}. Westbound ${getStatusText(bridgeStatus.westbound)}.${isWarning ? " Current traffic data is not confirmed." : ""}`}{windWarning ? (windWarning.level === "closure" ? " High winds forecast: bridge closure likely." : " Strong winds forecast: 40 mph limit likely.") : ""}{weatherError || (weatherObservation && !weather) ? " Weather unavailable." : ""}{eventsError ? " History unavailable." : ""}</p>
 
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-4">
@@ -298,6 +309,27 @@ export default function Home() {
                 ? "Could not refresh live data. Check official travel sources before travelling."
                 : "Status not freshly confirmed. Check official travel sources before travelling."}
             </p>
+          </div>
+        )}
+
+        {/* Forecast high-wind restriction */}
+        {windWarning && (
+          <div className={`flex items-start gap-3 p-4 rounded-xl border ${windWarning.level === "closure"
+            ? "border-rose-500/25 bg-rose-500/8 text-rose-800 dark:text-rose-200"
+            : "border-amber-500/25 bg-amber-500/8 text-amber-800 dark:text-amber-200"}`}>
+            <Wind className={`h-4 w-4 mt-0.5 flex-shrink-0 ${windWarning.level === "closure" ? "text-rose-700 dark:text-rose-400" : "text-amber-700 dark:text-amber-400"}`} />
+            <div className="text-sm leading-relaxed space-y-1">
+              <p className="font-medium">
+                {windWarning.level === "closure" ? "High winds forecast: bridge closure likely" : "Strong winds forecast: 40 mph limit likely"}
+              </p>
+              <p>
+                Gusts up to {windWarning.peakGust} mph are forecast between {formatForecastTime(windWarning.from)} and {formatForecastTime(windWarning.until)}.{" "}
+                {windWarning.level === "closure"
+                  ? "National Highways closes the bridge when gusts of 60 mph or more are forecast."
+                  : "National Highways applies a 40 mph limit in winds above 50 mph and closes the bridge at 60 mph."}
+              </p>
+              <p className="opacity-80">Based on a weather forecast, not an official notice. Check National Highways before travelling.</p>
+            </div>
           </div>
         )}
 
@@ -380,7 +412,7 @@ export default function Home() {
             <WeatherIcon description={weather?.description ?? "Unknown"} className="h-4 w-4" />
             <span>{weatherLoading ? (weather ? "Updating weather…" : "Loading weather…") : weather?.description ?? "Weather unavailable"}</span>
           </div>
-          {weather && weather.windSpeed > 30 && (
+          {weather && !windWarning && weather.windSpeed > 30 && (
             <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-800 dark:text-amber-200 mt-3">
               <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-700 dark:text-amber-400 flex-shrink-0" />
               <p className="text-sm">Strong winds nearby. This estimate does not confirm a bridge restriction; follow official updates and road signs.</p>

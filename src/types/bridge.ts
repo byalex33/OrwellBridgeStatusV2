@@ -43,6 +43,14 @@ export interface BridgeStatusResponse {
   };
 }
 
+// Forecast gusts against National Highways' Orwell Bridge high-wind thresholds.
+export interface WindWarning {
+  level: 'limit' | 'closure';
+  peakGust: number;
+  from: string;
+  until: string;
+}
+
 export interface WeatherResponse {
   success: boolean;
   data: {
@@ -52,6 +60,8 @@ export interface WeatherResponse {
     windDirection: number;
     description: string;
     icon: string;
+    // null: no high winds forecast; absent: gust forecast unavailable.
+    windWarning?: WindWarning | null;
   } | null;
   realTime?: boolean;
   cached?: boolean;
