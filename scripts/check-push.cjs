@@ -39,7 +39,7 @@ async function senderCheck() {
   };
   const sender = load('src/lib/push.ts', {
     './mongodb': async () => ({ db: () => ({ collection: name => name === 'pushMonitor' ? monitors : subscriptions }) }),
-    './traffic': { getBridgeTrafficData: async () => ({ directions: current, timestamp: new Date() }) },
+    './reading': { refreshTrafficReading: async () => ({ directions: current, timestamp: new Date() }) },
     'web-push': { setVapidDetails() {}, async sendNotification(subscription, payload) {
       sends++;
       assert.equal(JSON.parse(payload).url, '/?notification=bridge-closure');
@@ -79,6 +79,7 @@ async function endpointCheck() {
   assert.equal(saved, 2);
   const check = load('src/app/api/push/check/route.ts', {
     '@/lib/push': { ...push, pushEnabled: () => true, checkClosures: async () => { throw Error('Unavailable'); } },
+    '@/lib/reading': { refreshTrafficReading: async () => { throw Error('Alerts path must not refresh twice'); } },
     'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
   });
   assert.equal((await check.GET(new Request('https://example.test/api/push/check'))).status, 401);

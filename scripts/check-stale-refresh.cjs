@@ -16,7 +16,7 @@ const route = load('src/app/api/bridge-status/route.ts', {
   'next/server': { after: () => {}, NextResponse: { json: body => body } },
   '@/lib/cache': { cache },
   '@/lib/records': {},
-  '@/lib/traffic': { getBridgeTrafficData: async () => { now += 2000; throw Error('offline'); } },
+  '@/lib/reading': { READING_MAX_AGE_MS: 2100000, getSharedTrafficReading: async () => { now += 2000; throw Error('offline'); } },
 });
 route.GET().then(body => {
   assert.equal(body.success,true);

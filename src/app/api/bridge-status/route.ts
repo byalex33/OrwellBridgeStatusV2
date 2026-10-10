@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server';
 import { BridgeStatusRecord } from '@/types/bridge';
-import { getBridgeTrafficData } from '@/lib/traffic';
 import type { DirectionalStatus, OverallStatus } from '@/lib/traffic';
+import { getSharedTrafficReading, READING_MAX_AGE_MS, type TrafficReading } from '@/lib/reading';
 import { mapBridgeRecord, type DbBridgeRecord } from '@/lib/records';
 import { saveBridgeTransition } from '@/lib/history';
 import { cache } from '@/lib/cache';
@@ -56,7 +56,7 @@ async function fetchHistoricalRecords(limit: number): Promise<BridgeStatusRecord
     .slice(0, limit);
 }
 
-function buildCurrentRecord(trafficData: Awaited<ReturnType<typeof getBridgeTrafficData>>): BridgeStatusRecord {
+function buildCurrentRecord(trafficData: TrafficReading): BridgeStatusRecord {
   return {
     _id: `current_${Date.now()}`,
     status: trafficData.overallStatus.status,
@@ -83,7 +83,7 @@ async function getDatabaseFallbackRecords(): Promise<BridgeStatusRecord[]> {
 
 function makeCacheEntry(
   records: BridgeStatusRecord[],
-  trafficData: Awaited<ReturnType<typeof getBridgeTrafficData>>
+  trafficData: TrafficReading
 ): BridgeCacheEntry {
   return {
     records,
@@ -126,12 +126,13 @@ export async function GET() {
       });
     }
 
-    // ponytail: per-instance deduplication; use shared coordination if provider quotas require it.
+    // Re-read the shared reading each minute; providers are only polled when it expires.
     const cacheEntry = await cache.getOrFetch('bridge-status', async () => {
-      const trafficData = await getBridgeTrafficData();
+      const trafficData = await getSharedTrafficReading();
+      if (retainedEntry && new Date(retainedEntry.timestamp).getTime() === new Date(trafficData.timestamp).getTime()) return retainedEntry;
       const currentRecord = buildCurrentRecord(trafficData);
       return makeCacheEntry([currentRecord], trafficData);
-    }, 600, 300);
+    }, READING_MAX_AGE_MS / 1000, 60);
     scheduleHistory(cacheEntry);
 
     return jsonNoStore({

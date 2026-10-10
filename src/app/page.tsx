@@ -99,7 +99,7 @@ export default function Home() {
             : "cached";
 
           const age = apiTimestamp ? Date.now() - new Date(apiTimestamp).getTime() : NaN;
-          if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 600000 || age < -60000 || bridgeResult.stale || bridgeResult.fallback)) {
+          if (bridgeResult.trafficData && (!Number.isFinite(age) || age > 2400000 || age < -60000 || bridgeResult.stale || bridgeResult.fallback)) {
             setBridgeStatus(prev => ({ ...prev, eastbound: "unknown", westbound: "unknown", lastUpdated, isRealTime: false, freshness: bridgeResult.fallback ? "fallback" : "stale" }));
             setTrafficData(null);
           } else if (bridgeResult.trafficData) {
@@ -174,7 +174,7 @@ export default function Home() {
       setNow(Date.now());
       setBridgeStatus(prev => {
         const age = prev.observedAt ? Date.now() - new Date(prev.observedAt).getTime() : NaN;
-        return (prev.freshness === "live" || prev.freshness === "cached") && (!Number.isFinite(age) || age > 600000 || age < -60000)
+        return (prev.freshness === "live" || prev.freshness === "cached") && (!Number.isFinite(age) || age > 2400000 || age < -60000)
           ? { ...prev, eastbound: "unknown", westbound: "unknown", isRealTime: false, freshness: "stale" } : prev;
       });
     }, 15000);

@@ -11,7 +11,7 @@ const collection = { insertOne: async () => ({ insertedId: '1' }), find: () => {
 const dependencies = {
   'next/server': { NextResponse: { json: body => body }, after: fn => deferred.push(fn) },
   '@/lib/history': { saveBridgeTransition: async () => { writes++; if (failWrite) throw Error('temporary database failure'); } },
-  '@/lib/traffic': { getBridgeTrafficData: async () => observation },
+  '@/lib/reading': { getSharedTrafficReading: async () => observation, READING_MAX_AGE_MS: 2100000 },
   '@/lib/cache': { cache: { getWithStale: key => ({ data: cache.get(key), isStale: false }), get: key => cache.get(key), set: (key, value) => cache.set(key, value), getOrFetch: async (key, fn) => { const value = cache.has(key) ? cache.get(key) : await fn(); cache.set(key, value); return value; } } },
   '@/lib/records': { mapBridgeRecord: x => x },
   '@/lib/mongodb': { default: () => Promise.resolve({ db: () => ({ collection: () => collection }) }) },

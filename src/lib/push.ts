@@ -2,7 +2,8 @@ import { createHash, randomUUID, timingSafeEqual, ECDH } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 import webpush from 'web-push';
 import getMongoClient from './mongodb';
-import { getBridgeTrafficData, type DirectionalStatus } from './traffic';
+import type { DirectionalStatus } from './traffic';
+import { refreshTrafficReading } from './reading';
 
 const directions = ['eastbound', 'westbound'] as const;
 type Direction = typeof directions[number];
@@ -88,7 +89,7 @@ export async function checkClosures() {
   if (!monitor) return { busy: true, accepted: 0, expired: 0, failed: 0 };
   const counts = { busy: false, accepted: 0, expired: 0, failed: 0 };
   try {
-    const traffic = await getBridgeTrafficData(); // Fetch providers directly, never use the page's cached status.
+    const traffic = await refreshTrafficReading(); // Fetch providers directly and share the reading with pages.
     const age = Date.now() - new Date(traffic.timestamp).getTime();
     if (!Number.isFinite(age) || age < -60000 || age > 60000) throw new Error('Stale traffic reading');
     const next = nextMonitor(monitor.last, monitor.pending, traffic.directions);
