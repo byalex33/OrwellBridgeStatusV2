@@ -363,11 +363,13 @@ export default function Home() {
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">{route}</div>
                   </div>
-                  {traffic?.averageSpeed != null && (
+                  {traffic?.averageSpeed != null ? (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                       <Gauge className="h-3.5 w-3.5" />
                       <NumberTicker value={traffic.averageSpeed} /> mph
                     </div>
+                  ) : status === "open" && traffic && (
+                    <div className="text-xs text-muted-foreground">No live speed data</div>
                   )}
                 </div>
                 <div className="flex items-center gap-3">

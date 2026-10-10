@@ -54,8 +54,9 @@ export function analyzeMapboxRoute(route: MapboxRoute | undefined, direction: 'e
       if (levels[i] === 'heavy' || levels[i] === 'severe') congested += length;
     });
   }
-  // Without live congestion readings the duration is only a typical-speed estimate.
-  if (measured < distance * 0.5) return unknown('no live congestion data');
+  // Quiet periods have no live probes: the route still crosses and no closure is reported,
+  // so report open without a speed rather than present a typical-speed estimate as live.
+  if (measured < distance * 0.5) return { status: 'OPEN', details: 'Mapbox: No closures reported; no live speed data', averageSpeed: null };
 
   const averageSpeed = Math.round(distance / duration * 2.237);
   if (congested / measured >= 0.5 || (typeof typical === 'number' && typical > 0 && duration > typical * 2)) {

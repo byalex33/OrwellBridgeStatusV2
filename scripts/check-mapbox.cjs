@@ -21,7 +21,11 @@ async function main() {
   assert.equal(analyze(route(), 'westbound').status, 'UNKNOWN', 'a route crossing the other way is not evidence');
   assert.equal(analyze(route({}, [[1.158, 52.04], [1.172, 52.04]])).status, 'UNKNOWN', 'a route off the bridge is not evidence');
   assert.equal(analyze(route({ distance: 9000 })).status, 'UNKNOWN', 'a detour is not treated as a closure');
-  assert.equal(analyze(route({}, east, ['unknown'])).status, 'UNKNOWN', 'typical-speed estimates are not live evidence');
+  const quiet = analyze(route({}, east, ['unknown']));
+  assert.equal(quiet.status, 'OPEN', 'no live data and no closure reads as open');
+  assert.equal(quiet.averageSpeed, null, 'typical-speed estimates are never shown as live speeds');
+  assert.equal(analyze(route({ duration: 200 }, east, ['unknown'])).status, 'OPEN', 'delays need live evidence');
+  assert.equal(analyze(route({ legs: [{ closures: [{}], annotation: { distance: [970], congestion: ['unknown'] } }] })).status, 'CLOSED', 'closures still win without live speeds');
   assert.equal(analyze(undefined).status, 'UNKNOWN');
   assert.equal(analyze(route({ geometry: { coordinates: [null, 'x'] } })).status, 'UNKNOWN');
 
