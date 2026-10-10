@@ -23,6 +23,7 @@ Copy `.env.example` to `.env.local`, fill in the available server-side credentia
 | `TOMTOM_API_KEY` | TomTom Traffic Flow API; requests speeds in mph. |
 | `HERE_API_KEY` | Optional HERE Traffic API directional evidence. |
 | `NATIONAL_HIGHWAYS_API_KEY` | Optional National Highways incident feed key. |
+| `MAPBOX_ACCESS_TOKEN` | Optional Mapbox Directions (`driving-traffic`) congestion and closure evidence. |
 | `MONGODB_URI` | MongoDB Atlas or replica-set connection for recorded events and historical fallback. |
 
 At least one usable traffic provider is needed for live traffic. Providers can fail independently; history is optional for live observations. A missing database makes event history unavailable. Configure only keys supported by the implementation; do not substitute unrelated API product keys.
@@ -80,4 +81,4 @@ Run `node scripts/check-analytics.mjs` for initialization, completed-installatio
 
 Use the existing Vercel project linked above. Check the project name and connected repository before importing or linking a checkout: a local `.vercel` directory can refer to a different project. Put server credentials in that project's environment settings with the intended Production/Preview scope. When deployment is enabled, pull requests create previews and merging to `master` deploys production through the GitHub integration. Respect paused deployments; canceled or missing deployment checks do not prove that a release passed.
 
-Open issues and pull requests in the repository linked above. Traffic evidence is provided by configured TomTom, HERE and National Highways integrations; weather estimates come from Open-Meteo.
+Open issues and pull requests in the repository linked above. Traffic evidence is provided by configured TomTom, HERE, Mapbox and National Highways integrations; weather estimates come from Open-Meteo.
