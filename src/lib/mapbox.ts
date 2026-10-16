@@ -29,7 +29,22 @@ interface MapboxRoute {
 
 interface MapboxResponse {
   code?: string;
+  message?: string;
   routes?: MapboxRoute[];
+}
+
+class MapboxRouteError extends Error {
+  constructor(public detail: { code?: string; mapboxMessage?: string; routes?: number }) {
+    super('Mapbox response missing route data');
+    this.name = 'MapboxRouteError';
+  }
+}
+
+// Mapbox explains a missing route (NoRoute, NoSegment, InvalidInput...) in code and message; HTTP errors carry them in the body.
+function describeFailure(reason: unknown) {
+  const body = (reason as { response?: { status?: number; data?: MapboxResponse } })?.response;
+  const detail = { status: body?.status, code: body?.data?.code, mapboxMessage: body?.data?.message };
+  return { message: reason instanceof Error ? reason.message : 'Unknown error', ...(reason instanceof MapboxRouteError ? reason.detail : detail) };
 }
 
 export function analyzeMapboxRoute(route: MapboxRoute | undefined, direction: 'eastbound' | 'westbound'): Omit<TrafficData, 'description'> {
@@ -78,7 +93,9 @@ async function fetchDirection(direction: 'eastbound' | 'westbound'): Promise<Tra
     },
     timeout: 8000,
   });
-  if (response.data?.code !== 'Ok' || !Array.isArray(response.data.routes)) throw new Error('Mapbox response missing route data');
+  if (response.data?.code !== 'Ok' || !Array.isArray(response.data.routes)) {
+    throw new MapboxRouteError({ code: response.data?.code, mapboxMessage: response.data?.message, routes: response.data?.routes?.length });
+  }
   const result = analyzeMapboxRoute(response.data.routes[0], direction);
   if (result.status === 'UNKNOWN') console.warn('Mapbox reading unknown', { direction, reason: result.details });
   return { ...result, description: `A14 ${direction} (Mapbox)` };
@@ -87,7 +104,7 @@ async function fetchDirection(direction: 'eastbound' | 'westbound'): Promise<Tra
 export async function getMapboxTrafficData(): Promise<DirectionalStatus> {
   const [eastbound, westbound] = await Promise.allSettled([fetchDirection('eastbound'), fetchDirection('westbound')]);
   for (const [direction, result] of [['eastbound', eastbound], ['westbound', westbound]] as const) {
-    if (result.status === 'rejected') console.warn('Mapbox request failed', { direction, message: result.reason instanceof Error ? result.reason.message : 'Unknown error' });
+    if (result.status === 'rejected') console.warn('Mapbox request failed', { direction, ...describeFailure(result.reason) });
   }
   if (eastbound.status === 'rejected' && westbound.status === 'rejected') throw new Error('Mapbox traffic data unavailable');
   const failed = (direction: 'eastbound' | 'westbound'): TrafficData => ({ status: 'UNKNOWN', details: `Unable to fetch Mapbox data for ${direction}`, averageSpeed: null, description: `A14 ${direction} (Mapbox)` });

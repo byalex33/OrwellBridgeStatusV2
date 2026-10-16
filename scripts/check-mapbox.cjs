@@ -42,8 +42,16 @@ async function main() {
   assert.equal(result.eastbound.status, 'OPEN');
   assert.match(result.eastbound.description, /Mapbox/);
   assert.equal(result.westbound.status, 'UNKNOWN');
-  const down = load('src/lib/mapbox.ts', { axios: { get: async () => ({ data: { code: 'NoRoute' } }) } });
+  const warnings = [];
+  console.warn = (_label, detail) => warnings.push(detail);
+  const down = load('src/lib/mapbox.ts', { axios: { get: async () => ({ data: { code: 'NoRoute', message: 'No route found' } }) } });
   await assert.rejects(() => down.getMapboxTrafficData(), /unavailable/);
+  assert.equal(warnings[0].code, 'NoRoute', 'failure log names the Mapbox response code');
+  assert.equal(warnings[0].mapboxMessage, 'No route found');
+  warnings.length = 0;
+  const rejected = load('src/lib/mapbox.ts', { axios: { get: async () => { throw Object.assign(Error('Request failed with status code 422'), { response: { status: 422, data: { code: 'NoSegment', message: 'No suitable edges near location' } } }); } } });
+  await assert.rejects(() => rejected.getMapboxTrafficData(), /unavailable/);
+  assert.deepEqual([warnings[0].status, warnings[0].code], [422, 'NoSegment'], 'HTTP errors log the status and Mapbox code');
   console.warn = realWarn;
   console.log('Mapbox directional checks passed');
 }
