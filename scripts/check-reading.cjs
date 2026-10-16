@@ -9,7 +9,8 @@ const readingCollection = {
   findOne: async () => { offline(); return stored; },
   updateOne: async (_query, update) => { offline(); stored = { ...update.$set }; },
 };
-const matches = query => state && (!query.owner || state.owner === query.owner) && (!query.retryAt || state.retryAt <= query.retryAt.$lte);
+const retryMatches = (query = {}) => !query.retryAt || (query.retryAt.$lte ? state.retryAt <= query.retryAt.$lte : state.retryAt > query.retryAt.$gt);
+const matches = query => state && (!query.owner || state.owner === query.owner) && (query.$or ? query.$or.some(retryMatches) : retryMatches(query));
 const refreshCollection = {
   findOne: async query => { offline(); return matches(query) ? state : null; },
   updateOne: async (query, update) => {
@@ -57,7 +58,7 @@ console.error = () => {};
   now += minutes(30);
   await assert.rejects(reading.refreshTrafficReading(), { name: 'ReadingUnavailableError' });
   assert.equal(fetches, 3, 'a second failure doubles the backoff');
-  assert.equal(reading.backoffMs(10), minutes(240), 'backoff is capped at four hours');
+  assert.equal(reading.backoffMs(10), minutes(60), 'backoff is capped at one hour');
 
   providersDown = false;
   now += minutes(30);
@@ -71,14 +72,16 @@ console.error = () => {};
   state.retryAt = new Date(now + minutes(4));
   await assert.rejects(reading.refreshTrafficReading(), { name: 'ReadingUnavailableError' });
   assert.equal(fetches, 5, 'a refresh already in flight is not duplicated');
-  state.retryAt = new Date(0);
+  state.retryAt = new Date(now + minutes(240));
+  await reading.refreshTrafficReading();
+  assert.equal(fetches, 6, 'a retry time beyond the longest backoff no longer blocks refresh');
 
   mongoDown = true;
   now += minutes(1);
   for (let i = 0; i < 5; i++) await reading.getSharedTrafficReading();
-  assert.equal(fetches, 5, 'database outage reuses the in-process reading');
+  assert.equal(fetches, 6, 'database outage reuses the in-process reading');
   await reading.refreshTrafficReading();
-  assert.equal(fetches, 6, 'scheduled refresh still fetches when the database is down');
-  assert.equal(samples, 4, 'every successful provider fetch records a pattern sample, even if saving fails');
+  assert.equal(fetches, 7, 'scheduled refresh still fetches when the database is down');
+  assert.equal(samples, 5, 'every successful provider fetch records a pattern sample, even if saving fails');
   console.log('Shared traffic reading cache checks passed');
 })().catch(error => { realError(error); process.exitCode = 1; }).finally(() => { console.error = realError; Date.now = realNow; });

@@ -6,9 +6,9 @@ export type TrafficReading = Awaited<ReturnType<typeof getBridgeTrafficData>>;
 
 // The scheduled check polls providers every 30 minutes; pages share the stored reading.
 export const READING_MAX_AGE_MS = 35 * 60 * 1000;
-// Consecutive failures wait 30m, 1h, 2h, then 4h before polling providers again.
+// Consecutive failures wait 30m, then 1h, before polling providers again; longer waits only delay recovery.
 const BACKOFF_BASE_MS = 30 * 60 * 1000;
-const BACKOFF_MAX_MS = 4 * 60 * 60 * 1000;
+const BACKOFF_MAX_MS = 60 * 60 * 1000;
 // Covers cron jitter so a 30-minute backoff does not skip the next scheduled run.
 const BACKOFF_GRACE_MS = 2 * 60 * 1000;
 // Longer than the grace so an in-flight refresh is never claimed twice.
@@ -58,8 +58,9 @@ async function claimRefresh(): Promise<string | null> {
   try {
     const states = await refreshStates();
     await states.updateOne({ _id: 'refresh' }, { $setOnInsert: { retryAt: new Date(0), failures: 0 } }, { upsert: true });
+    // A retryAt beyond the longest backoff was set under an older, longer policy and no longer applies.
     const claimed = await states.findOneAndUpdate(
-      { _id: 'refresh', retryAt: { $lte: new Date(now + BACKOFF_GRACE_MS) } },
+      { _id: 'refresh', $or: [{ retryAt: { $lte: new Date(now + BACKOFF_GRACE_MS) } }, { retryAt: { $gt: new Date(now + BACKOFF_MAX_MS) } }] },
       { $set: { owner, retryAt: new Date(now + REFRESH_LEASE_MS) } },
       { returnDocument: 'after' }
     );
