@@ -74,7 +74,8 @@ function buildCurrentRecord(trafficData: TrafficReading): BridgeStatusRecord {
 
 async function getDatabaseFallbackRecords(): Promise<BridgeStatusRecord[]> {
   try {
-    return await fetchHistoricalRecords(1);
+    // Shared for a minute so an outage does not turn every visit into a history query.
+    return await cache.getOrFetch('bridge-fallback', () => fetchHistoricalRecords(1), 60);
   } catch (dbError) {
     console.error('MongoDB fallback lookup failed:', dbError);
     return [];
@@ -126,7 +127,7 @@ export async function GET() {
       });
     }
 
-    // Re-read the shared reading each minute; providers are only polled when it expires.
+    // Re-read the shared reading each minute; only the scheduled check polls providers.
     const cacheEntry = await cache.getOrFetch('bridge-status', async () => {
       const trafficData = await getSharedTrafficReading();
       if (retainedEntry && new Date(retainedEntry.timestamp).getTime() === new Date(trafficData.timestamp).getTime()) return retainedEntry;
